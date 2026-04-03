@@ -231,12 +231,17 @@ export function MaintenanceAlerts() {
                   Edit
                 </button>
                 <button
-                  className="secondary-button danger-button"
+                  aria-busy={deletingAlertId === alert.id}
+                  aria-label={deletingAlertId === alert.id ? 'Deleting...' : 'Delete'}
+                  className={`secondary-button danger-button loading-button${deletingAlertId === alert.id ? ' is-loading' : ''}`}
                   disabled={deletingAlertId === alert.id}
                   onClick={() => handleDelete(alert)}
                   type="button"
                 >
-                  {deletingAlertId === alert.id ? 'Deleting...' : 'Delete'}
+                  <span aria-hidden="true" className="loading-button__content">
+                    <span className="loading-button__label loading-button__label--default">Delete</span>
+                    <span className="loading-button__label loading-button__label--active">Deleting...</span>
+                  </span>
                 </button>
               </div>
             </article>

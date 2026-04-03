@@ -293,12 +293,17 @@ export function RoutePlanner() {
                 Edit
               </button>
               <button
-                className="secondary-button danger-button"
+                aria-busy={deletingRouteId === route.id}
+                aria-label={deletingRouteId === route.id ? 'Deleting...' : 'Delete'}
+                className={`secondary-button danger-button loading-button${deletingRouteId === route.id ? ' is-loading' : ''}`}
                 disabled={deletingRouteId === route.id}
                 onClick={() => handleDelete(route)}
                 type="button"
               >
-                {deletingRouteId === route.id ? 'Deleting...' : 'Delete'}
+                <span aria-hidden="true" className="loading-button__content">
+                  <span className="loading-button__label loading-button__label--default">Delete</span>
+                  <span className="loading-button__label loading-button__label--active">Deleting...</span>
+                </span>
               </button>
             </div>
           </article>

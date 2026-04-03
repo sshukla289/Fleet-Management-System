@@ -690,6 +690,12 @@ input {
   border: 0;
   border-radius: 14px;
   cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    opacity 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .primary-button {
@@ -710,6 +716,11 @@ input {
   color: var(--color-primary-strong);
 }
 
+.primary-button:hover:not(:disabled),
+.secondary-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
 .secondary-button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
@@ -718,6 +729,43 @@ input {
 .danger-button {
   background: rgba(214, 40, 57, 0.12);
   color: #9f1c2b;
+}
+
+.loading-button {
+  min-width: 104px;
+}
+
+.loading-button__content {
+  display: grid;
+  align-items: center;
+}
+
+.loading-button__label {
+  grid-area: 1 / 1;
+  white-space: nowrap;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.loading-button__label--default {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.loading-button__label--active {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.loading-button.is-loading .loading-button__label--default {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.loading-button.is-loading .loading-button__label--active {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .empty-state {

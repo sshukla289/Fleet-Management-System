@@ -48,12 +48,17 @@ export function VehicleCard({ vehicle, onEdit, onDelete, isDeleting = false }: V
           ) : null}
           {onDelete ? (
             <button
-              className="secondary-button danger-button"
+              aria-busy={isDeleting}
+              aria-label={isDeleting ? 'Deleting...' : 'Delete'}
+              className={`secondary-button danger-button loading-button${isDeleting ? ' is-loading' : ''}`}
               disabled={isDeleting}
               onClick={() => onDelete(vehicle)}
               type="button"
             >
-              {isDeleting ? 'Deleting...' : 'Delete'}
+              <span aria-hidden="true" className="loading-button__content">
+                <span className="loading-button__label loading-button__label--default">Delete</span>
+                <span className="loading-button__label loading-button__label--active">Deleting...</span>
+              </span>
             </button>
           ) : null}
           <Link className="link-button" to={`/vehicles/${vehicle.id}`}>
