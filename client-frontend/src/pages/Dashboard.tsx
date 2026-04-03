@@ -6,7 +6,15 @@ import { TelemetryChart } from '../components/TelemetryChart'
 import { VehicleCard } from '../components/VehicleCard'
 import { fetchDrivers, fetchMaintenanceAlerts, fetchVehicles } from '../services/apiService'
 import { fetchVehicleTelemetry, submitVehicleTelemetry } from '../services/telemetryService'
-import type { CreateTelemetryInput, Driver, MaintenanceAlert, TelemetryData, Vehicle } from '../types'
+import type { Driver, MaintenanceAlert, TelemetryData, Vehicle } from '../types'
+
+interface TelemetryFormState {
+  latitude: string
+  longitude: string
+  speed: number
+  fuelLevel: number
+  timestamp: string
+}
 
 export function Dashboard() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
@@ -14,9 +22,9 @@ export function Dashboard() {
   const [alerts, setAlerts] = useState<MaintenanceAlert[]>([])
   const [telemetry, setTelemetry] = useState<TelemetryData[]>([])
   const [selectedVehicleId, setSelectedVehicleId] = useState('')
-  const [telemetryForm, setTelemetryForm] = useState<Omit<CreateTelemetryInput, 'vehicleId'>>({
-    latitude: 12.9716,
-    longitude: 77.5946,
+  const [telemetryForm, setTelemetryForm] = useState<TelemetryFormState>({
+    latitude: '12.9716',
+    longitude: '77.5946',
     speed: 84,
     fuelLevel: 18,
     timestamp: '',
@@ -90,13 +98,13 @@ export function Dashboard() {
   }
 
   function handleTelemetryFieldChange(
-    field: keyof Omit<CreateTelemetryInput, 'vehicleId'>,
+    field: keyof TelemetryFormState,
     value: string,
   ) {
     setTelemetryForm((current) => ({
       ...current,
       [field]:
-        field === 'timestamp'
+        field === 'timestamp' || field === 'latitude' || field === 'longitude'
           ? value
           : value === ''
             ? 0
@@ -113,6 +121,21 @@ export function Dashboard() {
       return
     }
 
+    const parsedLatitude = Number(telemetryForm.latitude)
+    const parsedLongitude = Number(telemetryForm.longitude)
+
+    if (!telemetryForm.latitude.trim() || Number.isNaN(parsedLatitude)) {
+      setTelemetryError('Latitude must be a valid number.')
+      setTelemetryMessage('')
+      return
+    }
+
+    if (!telemetryForm.longitude.trim() || Number.isNaN(parsedLongitude)) {
+      setTelemetryError('Longitude must be a valid number.')
+      setTelemetryMessage('')
+      return
+    }
+
     setIsSubmittingTelemetry(true)
     setTelemetryError('')
     setTelemetryMessage('')
@@ -121,6 +144,8 @@ export function Dashboard() {
       await submitVehicleTelemetry({
         vehicleId: selectedVehicleId,
         ...telemetryForm,
+        latitude: parsedLatitude,
+        longitude: parsedLongitude,
         timestamp: telemetryForm.timestamp || undefined,
       })
 
@@ -293,8 +318,8 @@ export function Dashboard() {
               type="button"
               onClick={() =>
                 setTelemetryForm({
-                  latitude: 12.9716,
-                  longitude: 77.5946,
+                  latitude: '12.9716',
+                  longitude: '77.5946',
                   speed: 84,
                   fuelLevel: 18,
                   timestamp: '',
