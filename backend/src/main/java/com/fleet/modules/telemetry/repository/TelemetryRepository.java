@@ -6,4 +6,6 @@ import com.fleet.modules.telemetry.entity.Telemetry;
 
 public interface TelemetryRepository extends JpaRepository<Telemetry, Long> {
     List<Telemetry> findByVehicleIdOrderByTimestampAsc(String vehicleId);
+
+    List<Telemetry> findByTripIdOrderByTimestampAsc(String tripId);
 }

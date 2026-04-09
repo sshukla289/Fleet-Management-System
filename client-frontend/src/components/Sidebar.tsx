@@ -10,6 +10,7 @@ const groups = [
     title: 'Fleet control',
     items: [
       { label: 'Vehicles', path: '/vehicles', icon: '02' },
+      { label: 'Trips', path: '/trips', icon: '05' },
       { label: 'Drivers', path: '/drivers', icon: '03' },
       { label: 'Routes', path: '/routes', icon: '04' },
     ],

@@ -11,6 +11,7 @@ public class Telemetry {
     private Long id;
 
     private String vehicleId;
+    private String tripId;
     private double latitude;
     private double longitude;
     private double speed;
@@ -31,6 +32,14 @@ public class Telemetry {
 
     public void setVehicleId(String vehicleId) {
         this.vehicleId = vehicleId;
+    }
+
+    public String getTripId() {
+        return tripId;
+    }
+
+    public void setTripId(String tripId) {
+        this.tripId = tripId;
     }
 
     public double getLatitude() {

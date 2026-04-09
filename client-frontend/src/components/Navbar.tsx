@@ -11,6 +11,10 @@ const titles: Record<string, { title: string; subtitle: string }> = {
     title: 'Vehicles',
     subtitle: 'Manage the active fleet and service bay inventory.',
   },
+  '/trips': {
+    title: 'Trips',
+    subtitle: 'Plan, validate, dispatch, and monitor active trip lifecycles.',
+  },
   '/drivers': {
     title: 'Drivers',
     subtitle: 'Track duty status, assignments, and hours driven.',
@@ -33,10 +37,7 @@ export function Navbar() {
   const { session } = useAuth()
   const { pathname } = useLocation()
 
-  const title = useMemo(
-    () => titles[pathname] ?? titles['/dashboard'],
-    [pathname],
-  )
+  const title = useMemo(() => titles[pathname] ?? titles['/dashboard'], [pathname])
 
   return (
     <header className="navbar">
@@ -49,7 +50,7 @@ export function Navbar() {
       <div className="navbar__controls">
         <button className="navbar__org" type="button">
           <span className="navbar__org-label">Demo Fleet</span>
-          <span className="navbar__org-chevron">⌄</span>
+          <span className="navbar__org-chevron">v</span>
         </button>
         <button aria-label="Notifications" className="navbar__notification" type="button">
           <span className="navbar__notification-badge">3</span>

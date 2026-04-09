@@ -1,4 +1,9 @@
 export type VehicleStatus = 'Active' | 'Idle' | 'Maintenance'
+export type TripStatus = 'DRAFT' | 'VALIDATED' | 'OPTIMIZED' | 'DISPATCHED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'BLOCKED'
+export type TripPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+export type TripDispatchStatus = 'NOT_DISPATCHED' | 'QUEUED' | 'DISPATCHED' | 'RELEASED'
+export type TripComplianceStatus = 'PENDING' | 'COMPLIANT' | 'REVIEW_REQUIRED' | 'BLOCKED'
+export type TripOptimizationStatus = 'NOT_STARTED' | 'READY' | 'OPTIMIZED' | 'FAILED'
 
 export interface Vehicle {
   id: string
@@ -27,13 +32,97 @@ export interface TelemetryData {
   engineTemperature: number
 }
 
+export interface TripTelemetryPoint {
+  vehicleId: string
+  tripId?: string
+  latitude: number
+  longitude: number
+  speed: number
+  fuelLevel: number
+  timestamp: string
+}
+
 export interface CreateTelemetryInput {
   vehicleId: string
+  tripId?: string
   latitude: number
   longitude: number
   speed: number
   fuelLevel: number
   timestamp?: string
+}
+
+export interface Trip {
+  tripId: string
+  routeId: string
+  assignedVehicleId: string
+  assignedDriverId: string
+  status: TripStatus
+  priority: TripPriority
+  source: string
+  destination: string
+  stops: string[]
+  plannedStartTime?: string
+  plannedEndTime?: string
+  actualStartTime?: string | null
+  actualEndTime?: string | null
+  estimatedDistance: number
+  actualDistance: number
+  estimatedDuration: string
+  actualDuration?: string | null
+  dispatchStatus: TripDispatchStatus
+  complianceStatus: TripComplianceStatus
+  optimizationStatus: TripOptimizationStatus
+  remarks?: string | null
+}
+
+export interface ValidationCheck {
+  code: string
+  label: string
+  passed: boolean
+  message: string
+}
+
+export interface TripValidationResult {
+  tripId: string
+  valid: boolean
+  complianceStatus: TripComplianceStatus
+  checks: ValidationCheck[]
+  blockingReasons: string[]
+  warnings: string[]
+  recommendedAction: string
+}
+
+export interface TripOptimizationResult {
+  tripId: string
+  optimizationStatus: TripOptimizationStatus
+  optimizedStops: string[]
+  estimatedDistance: number
+  estimatedDuration: string
+  routeScore: number
+  notes: string
+}
+
+export interface CreateTripInput {
+  routeId: string
+  assignedVehicleId: string
+  assignedDriverId: string
+  source: string
+  destination: string
+  stops: string[]
+  plannedStartTime: string
+  plannedEndTime: string
+  estimatedDistance: number
+  estimatedDuration: string
+  priority: TripPriority
+  remarks?: string
+}
+
+export interface CompleteTripInput {
+  actualEndTime: string
+  actualDistance: number
+  actualDuration?: string
+  remarks?: string
 }
 
 export interface MaintenanceAlert {

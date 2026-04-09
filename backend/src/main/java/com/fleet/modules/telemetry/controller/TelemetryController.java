@@ -24,4 +24,9 @@ public class TelemetryController {
     public ResponseEntity<List<TelemetryDTO>> getTelemetry(@PathVariable String vehicleId) {
         return ResponseEntity.ok(service.getTelemetry(vehicleId));
     }
+
+    @GetMapping("/trip/{tripId}")
+    public ResponseEntity<List<TelemetryDTO>> getTripTelemetry(@PathVariable String tripId) {
+        return ResponseEntity.ok(service.getTelemetryByTripId(tripId));
+    }
 }

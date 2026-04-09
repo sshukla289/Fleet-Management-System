@@ -8,6 +8,7 @@ import { Login } from './pages/Login'
 import { MaintenanceAlerts } from './pages/MaintenanceAlerts'
 import { Profile } from './pages/Profile'
 import { RoutePlanner } from './pages/RoutePlanner'
+import { Trips } from './pages/Trips'
 import { VehicleDetail } from './pages/VehicleDetail'
 import { VehicleList } from './pages/VehicleList'
 import './App.css'
@@ -51,6 +52,7 @@ function App() {
           element={<Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />}
         />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/trips" element={<Trips />} />
         <Route path="/vehicles" element={<VehicleList />} />
         <Route path="/vehicles/:id" element={<VehicleDetail />} />
         <Route path="/drivers" element={<DriverList />} />

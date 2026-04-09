@@ -10,6 +10,13 @@ import com.fleet.modules.route.entity.RoutePlan;
 import com.fleet.modules.route.repository.RoutePlanRepository;
 import com.fleet.modules.telemetry.entity.Telemetry;
 import com.fleet.modules.telemetry.repository.TelemetryRepository;
+import com.fleet.modules.trip.entity.Trip;
+import com.fleet.modules.trip.entity.TripComplianceStatus;
+import com.fleet.modules.trip.entity.TripDispatchStatus;
+import com.fleet.modules.trip.entity.TripOptimizationStatus;
+import com.fleet.modules.trip.entity.TripPriority;
+import com.fleet.modules.trip.entity.TripStatus;
+import com.fleet.modules.trip.repository.TripRepository;
 import com.fleet.modules.vehicle.entity.Vehicle;
 import com.fleet.modules.vehicle.repository.VehicleRepository;
 import java.time.LocalDate;
@@ -29,6 +36,7 @@ public class DataSeeder {
         DriverRepository driverRepository,
         MaintenanceAlertRepository maintenanceAlertRepository,
         RoutePlanRepository routePlanRepository,
+        TripRepository tripRepository,
         AppUserRepository appUserRepository,
         TelemetryRepository telemetryRepository,
         PasswordEncoder passwordEncoder
@@ -68,6 +76,34 @@ public class DataSeeder {
                 ));
             }
 
+            if (tripRepository.count() == 0) {
+                tripRepository.saveAll(List.of(
+                    new Trip(
+                        "TRIP-1001",
+                        "RT-501",
+                        "VH-101",
+                        "DR-201",
+                        "Mumbai Hub",
+                        "Pune Depot",
+                        TripStatus.IN_PROGRESS,
+                        TripPriority.HIGH,
+                        TripDispatchStatus.DISPATCHED,
+                        TripComplianceStatus.COMPLIANT,
+                        TripOptimizationStatus.OPTIMIZED,
+                        LocalDateTime.now().minusHours(1),
+                        LocalDateTime.now().plusHours(5),
+                        LocalDateTime.now().minusMinutes(35),
+                        null,
+                        342,
+                        128,
+                        "6h 15m",
+                        "2h 10m",
+                        "Morning dispatch in motion.",
+                        List.of("Mumbai Hub", "Lonavala", "Pune Depot", "Satara Crossdock")
+                    )
+                ));
+            }
+
             if (appUserRepository.count() == 0) {
                 appUserRepository.save(
                     new AppUser(
@@ -91,11 +127,11 @@ public class DataSeeder {
 
             if (telemetryRepository.count() == 0) {
                 telemetryRepository.saveAll(List.of(
-                    createTelemetry("VH-101", 19.0760, 72.8777, 48, 74, 25),
-                    createTelemetry("VH-101", 19.1136, 72.8697, 56, 70, 20),
-                    createTelemetry("VH-101", 19.1480, 72.9310, 62, 66, 15),
-                    createTelemetry("VH-101", 19.2010, 73.0169, 54, 61, 10),
-                    createTelemetry("VH-101", 19.2183, 73.0844, 45, 58, 5)
+                    createTelemetry("VH-101", "TRIP-1001", 19.0760, 72.8777, 48, 74, 25),
+                    createTelemetry("VH-101", "TRIP-1001", 19.1136, 72.8697, 56, 70, 20),
+                    createTelemetry("VH-101", "TRIP-1001", 19.1480, 72.9310, 62, 66, 15),
+                    createTelemetry("VH-101", "TRIP-1001", 19.2010, 73.0169, 54, 61, 10),
+                    createTelemetry("VH-101", "TRIP-1001", 19.2183, 73.0844, 45, 58, 5)
                 ));
             }
         };
@@ -103,6 +139,7 @@ public class DataSeeder {
 
     private Telemetry createTelemetry(
         String vehicleId,
+        String tripId,
         double latitude,
         double longitude,
         double speed,
@@ -111,6 +148,7 @@ public class DataSeeder {
     ) {
         Telemetry telemetry = new Telemetry();
         telemetry.setVehicleId(vehicleId);
+        telemetry.setTripId(tripId);
         telemetry.setLatitude(latitude);
         telemetry.setLongitude(longitude);
         telemetry.setSpeed(speed);

@@ -2143,11 +2143,240 @@ body {
   background: #f8fbff;
 }
 
+.page-shell {
+  display: grid;
+  gap: 20px;
+}
+
+.notice {
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(0, 109, 119, 0.08);
+  color: var(--color-primary-strong);
+  font-weight: 600;
+}
+
+.dashboard-stats {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.dashboard-grid--trips,
+.dashboard-grid--trips-detail {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: 1.1fr 1.4fr;
+}
+
+.dashboard-grid--trips-detail {
+  grid-template-columns: 1fr 1.1fr;
+  align-items: start;
+}
+
+.trip-form {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
+.trip-form label,
+.trip-completion label {
+  display: grid;
+  gap: 8px;
+  color: var(--color-primary-strong);
+  font-weight: 600;
+}
+
+.trip-form__wide {
+  grid-column: 1 / -1;
+}
+
+.trip-form input,
+.trip-form select,
+.trip-form textarea,
+.trip-completion input,
+.trip-completion textarea {
+  width: 100%;
+  border: 1px solid rgba(100, 116, 139, 0.22);
+  border-radius: 14px;
+  background: #f8fbff;
+  color: var(--color-slate-900);
+  padding: 12px 14px;
+  font: inherit;
+}
+
+.trip-form textarea,
+.trip-completion textarea {
+  resize: vertical;
+}
+
+.trip-form__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.trip-table {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.trip-table__head,
+.trip-table__row {
+  display: grid;
+  grid-template-columns: 1.1fr 0.8fr 1fr 1fr 0.8fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.trip-table__head {
+  padding: 0 10px;
+  color: var(--color-muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.trip-table__row {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 18px;
+  background: #fff;
+  padding: 14px 16px;
+  text-align: left;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.trip-table__row:hover,
+.trip-table__row--selected {
+  transform: translateY(-1px);
+  border-color: rgba(0, 109, 119, 0.28);
+  box-shadow: 0 18px 32px rgba(15, 23, 42, 0.08);
+}
+
+.trip-table__row strong,
+.trip-table__row small {
+  display: block;
+}
+
+.trip-table__row small {
+  margin-top: 4px;
+  color: var(--color-muted);
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.status-pill--mint {
+  background: rgba(42, 157, 143, 0.14);
+  color: #176d64;
+}
+
+.status-pill--blue {
+  background: rgba(75, 127, 214, 0.14);
+  color: #2457a4;
+}
+
+.status-pill--violet {
+  background: rgba(124, 92, 255, 0.14);
+  color: #5d3fd3;
+}
+
+.status-pill--amber {
+  background: rgba(245, 158, 11, 0.16);
+  color: #a05800;
+}
+
+.status-pill--rose {
+  background: rgba(214, 40, 57, 0.16);
+  color: #9f1c2b;
+}
+
+.trip-detail__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.trip-detail__stats,
+.trip-completion__grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 16px;
+}
+
+.trip-detail__stats article,
+.trip-telemetry__item {
+  padding: 14px;
+  border-radius: 16px;
+  background: #f8fbff;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.trip-detail__stats span,
+.trip-telemetry__item span {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--color-muted);
+  font-size: 0.84rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.trip-detail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.trip-completion {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.trip-completion h4 {
+  margin: 0 0 12px;
+}
+
+.trip-telemetry {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin-top: 14px;
+}
+
 @media (max-width: 1100px) {
   .app-shell__body,
   .dashboard-content-grid,
   .dashboard-lower-grid,
   .dashboard-subdashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-grid--trips,
+  .dashboard-grid--trips-detail,
+  .trip-form,
+  .trip-detail__stats,
+  .trip-completion__grid,
+  .trip-table__head,
+  .trip-table__row {
     grid-template-columns: 1fr;
   }
 
