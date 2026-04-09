@@ -1,5 +1,6 @@
 import type {
   AssignShiftInput,
+  AuditLogEntry,
   AuthSession,
   Alert,
   CompleteTripInput,
@@ -360,6 +361,39 @@ const profile: UserProfile = {
   assignedRegion: 'West and South India',
 }
 
+const auditLogs: AuditLogEntry[] = [
+  {
+    id: 'AU-1',
+    actor: 'system',
+    action: 'TRIP_CREATED',
+    entityType: 'TRIP',
+    entityId: 'TRIP-1001',
+    summary: 'Trip created.',
+    detailsJson: '{"routeId":"RT-501","vehicleId":"VH-101","driverId":"DR-201","priority":"HIGH"}',
+    createdAt: '2026-04-09T07:45:00',
+  },
+  {
+    id: 'AU-2',
+    actor: 'system',
+    action: 'TRIP_DISPATCHED',
+    entityType: 'TRIP',
+    entityId: 'TRIP-1001',
+    summary: 'Trip dispatched.',
+    detailsJson: '{"vehicleId":"VH-101","driverId":"DR-201","dispatchStatus":"DISPATCHED"}',
+    createdAt: '2026-04-09T08:25:00',
+  },
+  {
+    id: 'AU-3',
+    actor: 'system',
+    action: 'ALERT_ACKNOWLEDGED',
+    entityType: 'ALERT',
+    entityId: 'AL-2',
+    summary: 'Alert acknowledged.',
+    detailsJson: '{"category":"COMPLIANCE","severity":"HIGH","status":"ACKNOWLEDGED"}',
+    createdAt: '2026-04-09T08:30:00',
+  },
+]
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${getApiBaseUrl()}${path}`, {
     headers: {
@@ -442,6 +476,10 @@ function cloneAlert(alert: Alert): Alert {
 
 function cloneNotification(notification: Notification): Notification {
   return { ...notification }
+}
+
+function cloneAuditLog(entry: AuditLogEntry): AuditLogEntry {
+  return { ...entry }
 }
 
 function cloneMaintenanceSchedule(schedule: MaintenanceSchedule): MaintenanceSchedule {
@@ -671,6 +709,11 @@ type AnalyticsFilters = {
   status?: TripStatus
 }
 
+type AuditFilters = {
+  from?: string
+  to?: string
+}
+
 function normalizeApiDateTime(value: string) {
   return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value) ? `${value}:00` : value
 }
@@ -688,6 +731,21 @@ function buildAnalyticsQuery(filters: AnalyticsFilters) {
 
   if (filters.status) {
     params.set('status', filters.status)
+  }
+
+  const query = params.toString()
+  return query ? `?${query}` : ''
+}
+
+function buildAuditQuery(filters: AuditFilters) {
+  const params = new URLSearchParams()
+
+  if (filters.from) {
+    params.set('from', normalizeApiDateTime(filters.from))
+  }
+
+  if (filters.to) {
+    params.set('to', normalizeApiDateTime(filters.to))
   }
 
   const query = params.toString()
@@ -1599,6 +1657,32 @@ export async function completeTrip(tripId: string, input: CompleteTripInput): Pr
     trip.actualDistance = input.actualDistance
     trip.actualDuration = input.actualDuration ?? trip.actualDuration ?? trip.estimatedDuration
     trip.remarks = input.remarks ?? trip.remarks
+    trip.delayMinutes = (() => {
+      const plannedEnd = parseDateTime(trip.plannedEndTime)
+      const actualEnd = parseDateTime(trip.actualEndTime)
+      if (!plannedEnd || !actualEnd) {
+        return 0
+      }
+      return Math.max(0, Math.round((actualEnd.getTime() - plannedEnd.getTime()) / 60000))
+    })()
+    trip.fuelUsed = input.fuelUsed ?? trip.fuelUsed ?? null
+    trip.completionProcessedAt = new Date().toISOString()
+
+    vehicles = vehicles.map((vehicle) =>
+      vehicle.id === trip.assignedVehicleId
+        ? { ...vehicle, status: 'Idle', driverId: '' }
+        : vehicle,
+    )
+    drivers = drivers.map((driver) =>
+      driver.id === trip.assignedDriverId
+        ? {
+            ...driver,
+            status: 'Resting',
+            assignedVehicleId: undefined,
+            hoursDrivenToday: driver.hoursDrivenToday + (parseTripDurationMinutes(trip.actualDuration ?? '0m') / 60),
+          }
+        : driver,
+    )
     return cloneTrip(trip)
   }
 }
@@ -1903,6 +1987,36 @@ export async function markNotificationRead(id: string): Promise<Notification> {
     notification.readAt = notification.readAt ?? new Date().toISOString()
     return cloneNotification(notification)
   }
+}
+
+export function fetchAuditLogs(filters: AuditFilters = {}): Promise<AuditLogEntry[]> {
+  return withFallback(
+    () => request<AuditLogEntry[]>(`/audit-logs${buildAuditQuery(filters)}`),
+    auditLogs
+      .filter((entry) => {
+        if (!filters.from && !filters.to) {
+          return true
+        }
+
+        return isWithinDateRange(entry.createdAt, filters.from, filters.to)
+      })
+      .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+      .map(cloneAuditLog),
+  )
+}
+
+export function fetchAuditLogsByEntity(entityType: string, entityId: string): Promise<AuditLogEntry[]> {
+  return withFallback(
+    () => request<AuditLogEntry[]>(`/audit-logs/entity/${encodeURIComponent(entityType)}/${encodeURIComponent(entityId)}`),
+    auditLogs
+      .filter(
+        (entry) =>
+          entry.entityType.toLowerCase() === entityType.toLowerCase() &&
+          entry.entityId.toLowerCase() === entityId.toLowerCase(),
+      )
+      .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+      .map(cloneAuditLog),
+  )
 }
 
 export function fetchMaintenanceSchedules(): Promise<MaintenanceSchedule[]> {

@@ -7,9 +7,13 @@ import com.fleet.modules.alert.entity.AlertCategory;
 import com.fleet.modules.alert.entity.AlertLifecycleStatus;
 import com.fleet.modules.alert.entity.AlertSeverity;
 import com.fleet.modules.alert.repository.AlertRepository;
+import com.fleet.modules.audit.service.AuditLogService;
+import com.fleet.modules.notification.service.NotificationService;
 import com.fleet.modules.telemetry.entity.Telemetry;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,9 +29,17 @@ public class AlertService {
     );
 
     private final AlertRepository alertRepository;
+    private final NotificationService notificationService;
+    private final AuditLogService auditLogService;
 
-    public AlertService(AlertRepository alertRepository) {
+    public AlertService(
+        AlertRepository alertRepository,
+        NotificationService notificationService,
+        AuditLogService auditLogService
+    ) {
         this.alertRepository = alertRepository;
+        this.notificationService = notificationService;
+        this.auditLogService = auditLogService;
     }
 
     public List<AlertDTO> getAlerts() {
@@ -63,7 +75,24 @@ public class AlertService {
             LocalDateTime.now()
         );
 
-        return toDto(alertRepository.save(alert));
+        Alert saved = alertRepository.save(alert);
+        maybeNotifyCritical(saved);
+        auditLogService.record(
+            "system",
+            "ALERT_CREATED",
+            "ALERT",
+            saved.getId(),
+            "Alert created.",
+            details(
+                "category", saved.getCategory().name(),
+                "severity", saved.getSeverity().name(),
+                "status", saved.getStatus().name(),
+                "title", saved.getTitle(),
+                "relatedTripId", saved.getRelatedTripId(),
+                "relatedVehicleId", saved.getRelatedVehicleId()
+            )
+        );
+        return toDto(saved);
     }
 
     @Transactional
@@ -76,7 +105,20 @@ public class AlertService {
         alert.setStatus(AlertLifecycleStatus.ACKNOWLEDGED);
         alert.setAcknowledgedAt(alert.getAcknowledgedAt() == null ? LocalDateTime.now() : alert.getAcknowledgedAt());
         alert.setUpdatedAt(LocalDateTime.now());
-        return toDto(alertRepository.save(alert));
+        Alert saved = alertRepository.save(alert);
+        auditLogService.record(
+            "system",
+            "ALERT_ACKNOWLEDGED",
+            "ALERT",
+            saved.getId(),
+            "Alert acknowledged.",
+            details(
+                "category", saved.getCategory().name(),
+                "severity", saved.getSeverity().name(),
+                "status", saved.getStatus().name()
+            )
+        );
+        return toDto(saved);
     }
 
     @Transactional
@@ -89,7 +131,20 @@ public class AlertService {
         alert.setStatus(AlertLifecycleStatus.RESOLVED);
         alert.setResolvedAt(LocalDateTime.now());
         alert.setUpdatedAt(LocalDateTime.now());
-        return toDto(alertRepository.save(alert));
+        Alert saved = alertRepository.save(alert);
+        auditLogService.record(
+            "system",
+            "ALERT_RESOLVED",
+            "ALERT",
+            saved.getId(),
+            "Alert resolved.",
+            details(
+                "category", saved.getCategory().name(),
+                "severity", saved.getSeverity().name(),
+                "status", saved.getStatus().name()
+            )
+        );
+        return toDto(saved);
     }
 
     @Transactional
@@ -211,7 +266,9 @@ public class AlertService {
         alert.setMetadataJson(metadataJson);
         alert.setUpdatedAt(LocalDateTime.now());
 
-        return toDto(alertRepository.save(alert));
+        Alert saved = alertRepository.save(alert);
+        maybeNotifyCritical(saved);
+        return toDto(saved);
     }
 
     private Alert findAlert(String id) {
@@ -272,5 +329,28 @@ public class AlertService {
 
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private void maybeNotifyCritical(Alert alert) {
+        if (alert != null && alert.getSeverity() == AlertSeverity.CRITICAL && OPEN_STATUSES.contains(alert.getStatus())) {
+            notificationService.notifyCriticalAlert(alert);
+        }
+    }
+
+    private Map<String, Object> details(Object... items) {
+        Map<String, Object> values = new LinkedHashMap<>();
+        if (items == null) {
+            return values;
+        }
+
+        for (int index = 0; index < items.length; index += 2) {
+            Object key = items[index];
+            Object value = index + 1 < items.length ? items[index + 1] : null;
+            if (key != null && value != null) {
+                values.put(String.valueOf(key), value);
+            }
+        }
+
+        return values;
     }
 }

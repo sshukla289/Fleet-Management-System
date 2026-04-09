@@ -12,4 +12,8 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, String> {
     List<AuditLog> findByEntityTypeAndEntityIdOrderByCreatedAtDesc(String entityType, String entityId);
 
     List<AuditLog> findByCreatedAtBetweenOrderByCreatedAtDesc(LocalDateTime from, LocalDateTime to);
+
+    List<AuditLog> findByCreatedAtGreaterThanEqualOrderByCreatedAtDesc(LocalDateTime from);
+
+    List<AuditLog> findByCreatedAtLessThanEqualOrderByCreatedAtDesc(LocalDateTime to);
 }

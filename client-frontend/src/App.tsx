@@ -3,6 +3,8 @@ import { Navbar } from './components/Navbar'
 import { Sidebar } from './components/Sidebar'
 import { useAuth } from './context/useAuth'
 import { Dashboard } from './pages/Dashboard'
+import { AnalyticsReports } from './pages/AnalyticsReports'
+import { AuditLogs } from './pages/AuditLogs'
 import { AlertsCenter } from './pages/AlertsCenter'
 import { DriverList } from './pages/DriverList'
 import { Login } from './pages/Login'
@@ -10,6 +12,7 @@ import { MaintenanceAlerts } from './pages/MaintenanceAlerts'
 import { Profile } from './pages/Profile'
 import { RoutePlanner } from './pages/RoutePlanner'
 import { Trips } from './pages/Trips'
+import { Notifications } from './pages/Notifications'
 import { VehicleDetail } from './pages/VehicleDetail'
 import { VehicleList } from './pages/VehicleList'
 import './App.css'
@@ -53,6 +56,9 @@ function App() {
           element={<Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />}
         />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/analytics/reports" element={<AnalyticsReports />} />
+        <Route path="/notifications" element={<Notifications />} />
+        <Route path="/audit-logs" element={<AuditLogs />} />
         <Route path="/alerts" element={<AlertsCenter />} />
         <Route path="/trips" element={<Trips />} />
         <Route path="/vehicles" element={<VehicleList />} />

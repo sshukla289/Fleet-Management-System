@@ -1,1 +1,4 @@
 .env
+
+# Backend build artifacts
+backend/target/

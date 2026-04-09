@@ -29,5 +29,8 @@ public record TripDTO(
     TripDispatchStatus dispatchStatus,
     TripComplianceStatus complianceStatus,
     TripOptimizationStatus optimizationStatus,
-    String remarks
+    String remarks,
+    Integer delayMinutes,
+    Double fuelUsed,
+    LocalDateTime completionProcessedAt
 ) {}

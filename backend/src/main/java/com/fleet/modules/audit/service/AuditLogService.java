@@ -36,6 +36,18 @@ public class AuditLogService {
                 .toList();
         }
 
+        if (from != null) {
+            return auditLogRepository.findByCreatedAtGreaterThanEqualOrderByCreatedAtDesc(from).stream()
+                .map(this::toDto)
+                .toList();
+        }
+
+        if (to != null) {
+            return auditLogRepository.findByCreatedAtLessThanEqualOrderByCreatedAtDesc(to).stream()
+                .map(this::toDto)
+                .toList();
+        }
+
         return getAuditLogs();
     }
 

@@ -86,6 +86,9 @@ export interface Trip {
   complianceStatus: TripComplianceStatus
   optimizationStatus: TripOptimizationStatus
   remarks?: string | null
+  delayMinutes?: number | null
+  fuelUsed?: number | null
+  completionProcessedAt?: string | null
 }
 
 export interface ValidationCheck {
@@ -133,8 +136,20 @@ export interface CreateTripInput {
 export interface CompleteTripInput {
   actualEndTime: string
   actualDistance: number
+  fuelUsed?: number
   actualDuration?: string
   remarks?: string
+}
+
+export interface AuditLogEntry {
+  id: string
+  actor: string
+  action: string
+  entityType: string
+  entityId: string
+  summary: string
+  detailsJson?: string | null
+  createdAt: string
 }
 
 export interface Alert {

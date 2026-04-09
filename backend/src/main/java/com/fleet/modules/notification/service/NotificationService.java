@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -58,6 +59,7 @@ public class NotificationService {
         return toDto(notification);
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public NotificationDTO notifyCriticalAlert(Alert alert) {
         if (alert == null) {
             return null;
@@ -76,6 +78,7 @@ public class NotificationService {
         );
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public NotificationDTO notifyTripDispatched(Trip trip) {
         if (trip == null) {
             return null;
@@ -94,6 +97,7 @@ public class NotificationService {
         );
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public NotificationDTO notifyTripCompleted(Trip trip) {
         if (trip == null) {
             return null;
@@ -121,6 +125,7 @@ public class NotificationService {
         );
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public NotificationDTO notifyMaintenanceReminder(MaintenanceSchedule schedule, String message) {
         if (schedule == null) {
             return null;
@@ -142,6 +147,7 @@ public class NotificationService {
         );
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public NotificationDTO notifyComplianceReminder(String tripId, String vehicleId, String message, String metadataJson) {
         return createOrRefresh(
             NotificationCategory.COMPLIANCE_REMINDER,

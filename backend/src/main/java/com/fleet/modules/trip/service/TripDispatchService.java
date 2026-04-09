@@ -4,14 +4,16 @@ import com.fleet.modules.compliance.dto.ComplianceCheckResultDTO;
 import com.fleet.modules.compliance.service.ComplianceService;
 import com.fleet.modules.driver.entity.Driver;
 import com.fleet.modules.driver.repository.DriverRepository;
+import com.fleet.modules.notification.service.NotificationService;
 import com.fleet.modules.trip.dto.CompleteTripRequest;
 import com.fleet.modules.trip.entity.Trip;
 import com.fleet.modules.trip.entity.TripDispatchStatus;
 import com.fleet.modules.trip.entity.TripStatus;
 import com.fleet.modules.vehicle.entity.Vehicle;
 import com.fleet.modules.vehicle.repository.VehicleRepository;
-import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,15 +25,21 @@ public class TripDispatchService {
     private final VehicleRepository vehicleRepository;
     private final DriverRepository driverRepository;
     private final ComplianceService complianceService;
+    private final TripPostProcessingService tripPostProcessingService;
+    private final NotificationService notificationService;
 
     public TripDispatchService(
         VehicleRepository vehicleRepository,
         DriverRepository driverRepository,
-        ComplianceService complianceService
+        ComplianceService complianceService,
+        TripPostProcessingService tripPostProcessingService,
+        NotificationService notificationService
     ) {
         this.vehicleRepository = vehicleRepository;
         this.driverRepository = driverRepository;
         this.complianceService = complianceService;
+        this.tripPostProcessingService = tripPostProcessingService;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -44,6 +52,12 @@ public class TripDispatchService {
         if (!complianceResult.compliant()) {
             trip.setStatus(TripStatus.BLOCKED);
             trip.setDispatchStatus(TripDispatchStatus.NOT_DISPATCHED);
+            notificationService.notifyComplianceReminder(
+                trip.getId(),
+                trip.getAssignedVehicleId(),
+                "Trip " + trip.getId() + " is blocked by compliance checks.",
+                complianceMetadata(complianceResult)
+            );
             throw new ResponseStatusException(
                 HttpStatus.BAD_REQUEST,
                 String.join(" ", complianceResult.blockingReasons())
@@ -65,6 +79,7 @@ public class TripDispatchService {
 
         trip.setStatus(TripStatus.DISPATCHED);
         trip.setDispatchStatus(TripDispatchStatus.DISPATCHED);
+        notificationService.notifyTripDispatched(trip);
         return trip;
     }
 
@@ -87,49 +102,7 @@ public class TripDispatchService {
 
     @Transactional
     public Trip complete(Trip trip, CompleteTripRequest request) {
-        if (trip == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Trip is required.");
-        }
-
-        if (request == null || request.actualEndTime() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Completion details are required.");
-        }
-
-        if (trip.getStatus() != TripStatus.IN_PROGRESS && trip.getStatus() != TripStatus.DISPATCHED) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Trip must be active before it can be completed.");
-        }
-
-        ensureAssignmentsPresent(trip);
-
-        Vehicle vehicle = vehicleRepository.findById(trip.getAssignedVehicleId())
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Assigned vehicle not found."));
-        Driver driver = driverRepository.findById(trip.getAssignedDriverId())
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Assigned driver not found."));
-
-        int actualDistance = Math.max(0, request.actualDistance());
-        if (trip.getActualStartTime() == null) {
-            trip.setActualStartTime(trip.getPlannedStartTime() != null ? trip.getPlannedStartTime() : request.actualEndTime());
-        }
-        String actualDuration = normalizeDuration(request.actualDuration(), request.actualEndTime(), trip);
-
-        trip.setActualEndTime(request.actualEndTime());
-        trip.setActualDistance(actualDistance);
-        trip.setActualDuration(actualDuration);
-        trip.setRemarks(request.remarks());
-        trip.setStatus(TripStatus.COMPLETED);
-        trip.setDispatchStatus(TripDispatchStatus.RELEASED);
-
-        vehicle.setMileage(vehicle.getMileage() + actualDistance);
-        vehicle.setStatus("Idle");
-        vehicle.setDriverId(null);
-
-        driver.setHoursDrivenToday(driver.getHoursDrivenToday() + parseDurationHours(actualDuration, trip));
-        driver.setStatus("Resting");
-        driver.setAssignedVehicleId(null);
-
-        vehicleRepository.save(vehicle);
-        driverRepository.save(driver);
-        return trip;
+        return tripPostProcessingService.finalizeCompletion(trip, request);
     }
 
     private void ensureDispatchable(Trip trip) {
@@ -152,70 +125,24 @@ public class TripDispatchService {
         }
     }
 
-    private String normalizeDuration(String requestedDuration, LocalDateTime actualEndTime, Trip trip) {
-        if (requestedDuration != null && !requestedDuration.trim().isEmpty()) {
-            return requestedDuration.trim();
-        }
-
-        if (trip.getActualStartTime() != null && actualEndTime != null) {
-            return formatDurationMinutes((int) Duration.between(trip.getActualStartTime(), actualEndTime).toMinutes());
-        }
-
-        if (trip.getPlannedStartTime() != null && actualEndTime != null) {
-            return formatDurationMinutes((int) Duration.between(trip.getPlannedStartTime(), actualEndTime).toMinutes());
-        }
-
-        return trip.getEstimatedDuration();
+    private String complianceMetadata(ComplianceCheckResultDTO result) {
+        return "{\"complianceStatus\":\"" + escape(result.complianceStatus().name())
+            + "\",\"blockingReasons\":" + toJsonArray(result.blockingReasons())
+            + ",\"warnings\":" + toJsonArray(result.warnings())
+            + "}";
     }
 
-    private double parseDurationHours(String duration, Trip trip) {
-        int minutes = parseDurationMinutes(duration);
-        if (minutes <= 0 && trip.getPlannedStartTime() != null && trip.getActualEndTime() != null) {
-            minutes = (int) Duration.between(trip.getPlannedStartTime(), trip.getActualEndTime()).toMinutes();
+    private String toJsonArray(Collection<String> values) {
+        if (values == null || values.isEmpty()) {
+            return "[]";
         }
-        return Math.max(0.0, minutes / 60.0);
+
+        return values.stream()
+            .map(value -> "\"" + escape(value) + "\"")
+            .collect(Collectors.joining(",", "[", "]"));
     }
 
-    private int parseDurationMinutes(String duration) {
-        if (duration == null || duration.trim().isEmpty()) {
-            return 0;
-        }
-
-        String normalized = duration.trim().toLowerCase();
-        int hours = 0;
-        int minutes = 0;
-
-        int hourMarker = normalized.indexOf('h');
-        if (hourMarker >= 0) {
-            hours = parseNumber(normalized.substring(0, hourMarker).trim());
-        }
-
-        int minuteMarker = normalized.indexOf('m');
-        if (minuteMarker >= 0) {
-            int minuteStart = hourMarker >= 0 ? hourMarker + 1 : 0;
-            minutes = parseNumber(normalized.substring(minuteStart, minuteMarker).trim());
-        }
-
-        return hours * 60 + minutes;
-    }
-
-    private String formatDurationMinutes(int totalMinutes) {
-        int safeMinutes = Math.max(0, totalMinutes);
-        int hours = safeMinutes / 60;
-        int minutes = safeMinutes % 60;
-
-        if (hours == 0) {
-            return minutes + "m";
-        }
-
-        return hours + "h " + minutes + "m";
-    }
-
-    private int parseNumber(String value) {
-        try {
-            return Integer.parseInt(value);
-        } catch (Exception exception) {
-            return 0;
-        }
+    private String escape(String value) {
+        return value == null ? "" : value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 }

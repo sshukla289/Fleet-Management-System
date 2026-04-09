@@ -46,6 +46,7 @@ const initialPlannerForm: CreateTripInput = {
 const initialCompletionForm: CompleteTripInput = {
   actualEndTime: new Date().toISOString().slice(0, 16),
   actualDistance: 0,
+  fuelUsed: undefined,
   actualDuration: '',
   remarks: '',
 }
@@ -92,6 +93,7 @@ function buildCompletionForm(trip?: Trip | null): CompleteTripInput {
   return {
     actualEndTime: new Date().toISOString().slice(0, 16),
     actualDistance: trip?.actualDistance || trip?.estimatedDistance || 0,
+    fuelUsed: trip?.fuelUsed ?? undefined,
     actualDuration: trip?.actualDuration ?? trip?.estimatedDuration ?? '',
     remarks: trip?.remarks ?? '',
   }
@@ -533,6 +535,23 @@ export function Trips() {
 
             <div className="trip-compliance-banner">
               <div>
+                <span>Post-trip summary</span>
+                <strong>{selectedTrip.status === 'COMPLETED' ? 'Completion metrics captured' : 'Awaiting trip completion'}</strong>
+                <p>
+                  Delay, fuel usage, and completion processing metadata are available once the trip is completed.
+                </p>
+              </div>
+              <div className="trip-compliance-banner__meta">
+                <span className="badge">Delay: {selectedTrip.delayMinutes ?? 0} min</span>
+                <span className="badge">Fuel: {selectedTrip.fuelUsed == null ? 'N/A' : selectedTrip.fuelUsed.toFixed(1)}</span>
+                <span className="badge">
+                  Processed: {selectedTrip.completionProcessedAt ? formatDateTime(selectedTrip.completionProcessedAt) : 'Pending'}
+                </span>
+              </div>
+            </div>
+
+            <div className="trip-compliance-banner">
+              <div>
                 <span>Compliance readiness</span>
                 <strong>{complianceCheck?.complianceStatus ?? selectedTrip.complianceStatus}</strong>
                 <p>
@@ -600,6 +619,21 @@ export function Trips() {
                     }
                     type="text"
                     value={completionForm.actualDuration ?? ''}
+                  />
+                </label>
+                <label>
+                  <span>Fuel used (optional)</span>
+                  <input
+                    min="0"
+                    onChange={(event) =>
+                      setCompletionForm({
+                        ...completionForm,
+                        fuelUsed: event.target.value === '' ? undefined : Number(event.target.value),
+                      })
+                    }
+                    step="0.1"
+                    type="number"
+                    value={completionForm.fuelUsed ?? ''}
                   />
                 </label>
                 <label className="trip-form__wide">

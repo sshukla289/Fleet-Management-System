@@ -4,7 +4,12 @@ import { useAuth } from '../context/useAuth'
 const groups = [
   {
     title: 'Overview',
-    items: [{ label: 'Dashboard', path: '/dashboard', icon: '01' }],
+    items: [
+      { label: 'Dashboard', path: '/dashboard', icon: '01' },
+      { label: 'Analytics', path: '/analytics/reports', icon: 'AR' },
+      { label: 'Notifications', path: '/notifications', icon: 'NT' },
+      { label: 'Audit logs', path: '/audit-logs', icon: 'AU' },
+    ],
   },
   {
     title: 'Fleet control',

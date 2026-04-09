@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 
 const titles: Record<string, { title: string; subtitle: string }> = {
@@ -35,11 +35,24 @@ const titles: Record<string, { title: string; subtitle: string }> = {
     title: 'Profile',
     subtitle: 'Update the fleet owner account and password.',
   },
+  '/analytics/reports': {
+    title: 'Analytics Reports',
+    subtitle: 'Operational trends for trips, vehicles, drivers, alerts, and maintenance.',
+  },
+  '/notifications': {
+    title: 'Notifications',
+    subtitle: 'In-app operational notifications and acknowledgements.',
+  },
+  '/audit-logs': {
+    title: 'Audit logs',
+    subtitle: 'Structured records for critical business actions.',
+  },
 }
 
 export function Navbar() {
   const { session } = useAuth()
   const { pathname } = useLocation()
+  const navigate = useNavigate()
 
   const title = useMemo(() => titles[pathname] ?? titles['/dashboard'], [pathname])
 
@@ -56,7 +69,12 @@ export function Navbar() {
           <span className="navbar__org-label">Demo Fleet</span>
           <span className="navbar__org-chevron">v</span>
         </button>
-        <button aria-label="Notifications" className="navbar__notification" type="button">
+        <button
+          aria-label="Notifications"
+          className="navbar__notification"
+          type="button"
+          onClick={() => navigate('/notifications')}
+        >
           <span className="navbar__notification-badge">3</span>
         </button>
         <div className="navbar__profile">
