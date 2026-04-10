@@ -1,9 +1,10 @@
 package com.fleet;
 
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-@SpringBootApplication
+@SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
 public class FleetApplication {
     public static void main(String[] args) {
         SpringApplication.run(FleetApplication.class, args);
