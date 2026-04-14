@@ -5,35 +5,35 @@ import type { AppRole } from '../types'
 
 const groups = [
   {
-    title: 'Overview',
+    title: 'MENU',
     items: [
-      { label: 'Dashboard', path: '/dashboard', icon: '01', roles: ['ADMIN', 'FLEET_MANAGER', 'DISPATCHER_PLANNER', 'MAINTENANCE_MANAGER'] },
-      { label: 'Analytics', path: '/analytics/reports', icon: 'AR', roles: ['ADMIN', 'FLEET_MANAGER', 'DISPATCHER_PLANNER', 'MAINTENANCE_MANAGER'] },
-      { label: 'Notifications', path: '/notifications', icon: 'NT', roles: ['ADMIN', 'FLEET_MANAGER', 'DISPATCHER_PLANNER', 'MAINTENANCE_MANAGER', 'DRIVER'] },
-      { label: 'Audit logs', path: '/audit-logs', icon: 'AU', roles: ['ADMIN', 'FLEET_MANAGER'] },
+      { label: 'Dashboard', path: '/dashboard', icon: <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>, roles: ['ADMIN', 'FLEET_MANAGER', 'DISPATCHER_PLANNER', 'MAINTENANCE_MANAGER'] },
+      { label: 'Analytics', path: '/analytics/reports', icon: <svg viewBox="0 0 24 24"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>, roles: ['ADMIN', 'FLEET_MANAGER', 'DISPATCHER_PLANNER', 'MAINTENANCE_MANAGER'] },
+      { label: 'Notifications', path: '/notifications', icon: <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>, roles: ['ADMIN', 'FLEET_MANAGER', 'DISPATCHER_PLANNER', 'MAINTENANCE_MANAGER', 'DRIVER'] },
+      { label: 'Audit logs', path: '/audit-logs', icon: <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>, roles: ['ADMIN', 'FLEET_MANAGER'] },
     ],
   },
   {
-    title: 'Fleet control',
+    title: 'FLEET CONTROL',
     items: [
-      { label: 'Vehicles', path: '/vehicles', icon: '02', roles: ['ADMIN', 'FLEET_MANAGER', 'DISPATCHER_PLANNER', 'MAINTENANCE_MANAGER'] },
-      { label: 'Trips', path: '/trips', icon: '05', roles: ['ADMIN', 'FLEET_MANAGER', 'DISPATCHER_PLANNER', 'MAINTENANCE_MANAGER', 'DRIVER'] },
-      { label: 'Alerts', path: '/alerts', icon: 'AL', roles: ['ADMIN', 'FLEET_MANAGER', 'DISPATCHER_PLANNER', 'MAINTENANCE_MANAGER', 'DRIVER'] },
-      { label: 'Drivers', path: '/drivers', icon: '03', roles: ['ADMIN', 'FLEET_MANAGER', 'DISPATCHER_PLANNER'] },
-      { label: 'Maintenance', path: '/maintenance', icon: 'MT', roles: ['ADMIN', 'FLEET_MANAGER', 'DISPATCHER_PLANNER', 'MAINTENANCE_MANAGER'] },
-      { label: 'Routes', path: '/routes', icon: '04', roles: ['ADMIN', 'FLEET_MANAGER', 'DISPATCHER_PLANNER'] },
+      { label: 'Vehicles', path: '/vehicles', icon: <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>, roles: ['ADMIN', 'FLEET_MANAGER', 'DISPATCHER_PLANNER', 'MAINTENANCE_MANAGER'] },
+      { label: 'Trips', path: '/trips', icon: <svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>, roles: ['ADMIN', 'FLEET_MANAGER', 'DISPATCHER_PLANNER', 'MAINTENANCE_MANAGER', 'DRIVER'] },
+      { label: 'Alerts', path: '/alerts', icon: <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>, roles: ['ADMIN', 'FLEET_MANAGER', 'DISPATCHER_PLANNER', 'MAINTENANCE_MANAGER', 'DRIVER'] },
+      { label: 'Drivers', path: '/drivers', icon: <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>, roles: ['ADMIN', 'FLEET_MANAGER', 'DISPATCHER_PLANNER'] },
+      { label: 'Maintenance', path: '/maintenance', icon: <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>, roles: ['ADMIN', 'FLEET_MANAGER', 'DISPATCHER_PLANNER', 'MAINTENANCE_MANAGER'] },
+      { label: 'Routes', path: '/routes', icon: <svg viewBox="0 0 24 24"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg>, roles: ['ADMIN', 'FLEET_MANAGER', 'DISPATCHER_PLANNER'] },
     ],
   },
   {
-    title: 'Account',
-    items: [{ label: 'Profile', path: '/profile', icon: 'PR', roles: ['ADMIN', 'FLEET_MANAGER', 'DISPATCHER_PLANNER', 'MAINTENANCE_MANAGER', 'DRIVER'] }],
+    title: 'ACCOUNT',
+    items: [{ label: 'Profile', path: '/profile', icon: <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>, roles: ['ADMIN', 'FLEET_MANAGER', 'DISPATCHER_PLANNER', 'MAINTENANCE_MANAGER', 'DRIVER'] }],
   },
 ] as const satisfies Array<{
   title: string
   items: Array<{
     label: string
     path: string
-    icon: string
+    icon: React.ReactNode
     roles: readonly AppRole[]
   }>
 }>
@@ -58,11 +58,7 @@ export function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar__brand">
-        <div className="sidebar__brand-mark">F</div>
-        <div>
-          <strong>Fleet Control</strong>
-          <p>Operations workspace</p>
-        </div>
+        <img src="/logo.svg" alt="Express Logistics Logo" className="sidebar__logo-img" />
       </div>
 
       <div className="sidebar__nav">
@@ -84,21 +80,23 @@ export function Sidebar() {
       </div>
 
       <div className="sidebar__footer">
-        <div className="sidebar__profile">
-          <span className="sidebar__avatar">
-            {session?.profile.name
-              .split(' ')
-              .map((part) => part[0])
-              .slice(0, 2)
-              .join('') ?? 'FM'}
-          </span>
-          <div>
-            <strong>{session?.profile.name ?? 'Fleet User'}</strong>
-            <p>{(normalizedRole && ROLE_LABELS[normalizedRole]) ?? session?.profile.role ?? 'Role unavailable'}</p>
+        <button className="sidebar__profile-container" onClick={() => void handleLogout()}>
+          <div className="sidebar__profile">
+            <span className="sidebar__avatar">
+              {session?.profile.name
+                .split(' ')
+                .map((part) => part[0])
+                .slice(0, 2)
+                .join('') ?? 'FM'}
+            </span>
+            <div className="sidebar__profile-info">
+              <strong>{session?.profile.name ?? 'Fleet User'}</strong>
+              <p>{(normalizedRole && ROLE_LABELS[normalizedRole]) ?? session?.profile.role ?? 'Role unavailable'}</p>
+            </div>
           </div>
-        </div>
-        <button className="sidebar__logout" type="button" onClick={() => void handleLogout()}>
-          Sign out
+          <div className="sidebar__arrow">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </div>
         </button>
       </div>
     </aside>

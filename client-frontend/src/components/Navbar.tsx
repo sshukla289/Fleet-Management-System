@@ -82,7 +82,7 @@ export function Navbar() {
 
       <div className="navbar__controls">
         <button className="navbar__org" type="button">
-          <span className="navbar__org-label">Fleet Control</span>
+          <span className="navbar__org-label">Express Logistics</span>
           <span className="navbar__org-chevron">v</span>
         </button>
         <button

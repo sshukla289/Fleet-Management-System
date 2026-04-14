@@ -253,15 +253,14 @@ export function VehicleList() {
         'Destination bay',
       ]
     : []
-
   return (
     <div className="page vehicle-tracking-page">
       <section className="vehicle-tracking-shell">
         <aside className="vehicle-tracking-sidebar">
           <div className="vehicle-tracking-sidebar__brand">
-            <span className="vehicle-tracking-sidebar__mark">RT</span>
+            <img src="/logo.svg" alt="Express Logistics Logo" style={{ width: '44px', height: 'auto', borderRadius: '8px' }} />
             <div>
-              <span className="vehicle-tracking-sidebar__eyebrow">Right direction</span>
+              <span className="vehicle-tracking-sidebar__eyebrow">Express Logistics</span>
               <h2>Tracking</h2>
               <p>Live fleet units, route readiness, and service status.</p>
             </div>

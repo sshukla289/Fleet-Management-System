@@ -1,0 +1,69 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="triGrad" x1="0" y1="0" x2="0.8" y2="1">
+      <stop offset="0%" stop-color="#FFB300" />
+      <stop offset="50%" stop-color="#FF8800" />
+      <stop offset="100%" stop-color="#FF6B00" />
+    </linearGradient>
+    <linearGradient id="truckGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#00A2FF" />
+      <stop offset="100%" stop-color="#0055FF" />
+    </linearGradient>
+  </defs>
+  
+  <rect width="512" height="512" fill="transparent" />
+  
+  <!-- Triangle Frame -->
+  <!-- Top corners rounded, bottom corner rounded -->
+  <path d="M 80,100 L 432,100 C 452,100 462,118 452,136 L 276,400 C 266,416 246,416 236,400 L 60,136 C 50,118 60,100 80,100 Z" fill="none" stroke="url(#triGrad)" stroke-width="28" stroke-linejoin="round" />
+  
+  <!-- Truck Trailer Box -->
+  <path d="M 204,130 L 308,130 L 308,190 L 204,190 Z" fill="url(#truckGrad)" stroke="#0E1A40" stroke-width="8" stroke-linejoin="round" />
+  
+  <!-- Truck Cab -->
+  <path d="M 196,190 L 316,190 C 330,190 330,204 330,214 L 330,310 L 182,310 L 182,214 C 182,204 182,190 196,190 Z" fill="url(#truckGrad)" stroke="#0E1A40" stroke-width="8" stroke-linejoin="round" />
+  
+  <!-- Windshield -->
+  <path d="M 200,210 L 312,210 C 316,210 316,214 316,220 L 316,240 C 316,246 316,246 312,246 L 200,246 C 196,246 196,246 196,240 L 196,220 C 196,214 196,210 200,210 Z" fill="#0E1A40" />
+  <path d="M 204,214 L 308,214 C 310,214 310,216 310,220 L 310,236 C 310,240 310,242 308,242 L 204,242 C 202,242 202,240 202,236 L 202,220 C 202,216 204,214 204,214 Z" fill="#00A2FF" opacity="0.3" />
+  
+  <!-- Grille Area -->
+  <rect x="226" y="260" width="60" height="4" fill="#0E1A40" />
+  <rect x="220" y="272" width="72" height="4" fill="#0E1A40" />
+  <rect x="214" y="284" width="84" height="4" fill="#0E1A40" />
+  <rect x="210" y="296" width="92" height="4" fill="#0E1A40" />
+  
+  <!-- Mirrors -->
+  <path d="M 166,230 L 182,230 L 182,260 L 166,260 Z" fill="url(#truckGrad)" stroke="#0E1A40" stroke-width="6" stroke-linejoin="round" />
+  <path d="M 330,230 L 346,230 L 346,260 L 330,260 Z" fill="url(#truckGrad)" stroke="#0E1A40" stroke-width="6" stroke-linejoin="round" />
+  
+  <!-- Mirror Connectors -->
+  <rect x="176" y="240" width="6" height="4" fill="#0E1A40" />
+  <rect x="330" y="240" width="6" height="4" fill="#0E1A40" />
+  
+  <!-- Headlights -->
+  <rect x="190" y="280" width="16" height="10" fill="#FFF" />
+  <rect x="306" y="280" width="16" height="10" fill="#FFF" />
+
+  <!-- Bumper -->
+  <path d="M 182,310 L 330,310 L 330,326 L 182,326 Z" fill="url(#truckGrad)" stroke="#0E1A40" stroke-width="8" stroke-linejoin="round" />
+  
+  <!-- License Plate -->
+  <rect x="240" y="316" width="32" height="6" fill="#0E1A40" />
+
+  <!-- Wheels Area (Background behind wheels) -->
+  <rect x="190" y="326" width="132" height="24" fill="#0E1A40" />
+  <!-- Under chassis -->
+  <rect x="220" y="326" width="72" height="12" fill="url(#truckGrad)" />
+
+  <!-- Wheels -->
+  <path d="M 194,326 L 206,326 L 206,350 L 194,350 Z" fill="url(#truckGrad)" stroke="#0E1A40" stroke-width="4" stroke-linejoin="round" />
+  <path d="M 212,326 L 224,326 L 224,350 L 212,350 Z" fill="url(#truckGrad)" stroke="#0E1A40" stroke-width="4" stroke-linejoin="round" />
+  
+  <path d="M 288,326 L 300,326 L 300,350 L 288,350 Z" fill="url(#truckGrad)" stroke="#0E1A40" stroke-width="4" stroke-linejoin="round" />
+  <path d="M 306,326 L 318,326 L 318,350 L 306,350 Z" fill="url(#truckGrad)" stroke="#0E1A40" stroke-width="4" stroke-linejoin="round" />
+
+  <!-- Text -->
+  <text x="256" y="440" font-family="'Arial Black', sans-serif" font-weight="900" font-size="64" fill="#FFF" text-anchor="middle" letter-spacing="2">EXPRESS</text>
+  <text x="256" y="470" font-family="'Arial', sans-serif" font-weight="700" font-size="18" fill="#00A2FF" text-anchor="middle" letter-spacing="14">LOGISTICS</text>
+</svg>

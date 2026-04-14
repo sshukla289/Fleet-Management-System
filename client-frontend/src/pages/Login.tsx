@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { PageHeader } from '../components/PageHeader'
+
 import { useAuth } from '../context/useAuth'
 
 export function Login() {
@@ -30,21 +30,13 @@ export function Login() {
     <div className="login-page">
       <div className="login-card">
         <div className="login-card__copy">
-          <PageHeader
-            eyebrow="Secure access"
-            title="Sign in to the fleet management portal"
-            description="Authenticate with a provisioned operations account to access the live fleet workspace."
-          />
-          <div className="pill-list">
-            <span className="pill">Role-based dashboard access</span>
-            <span className="pill">Route and telemetry visibility</span>
-            <span className="pill">Driver and asset coordination</span>
-          </div>
+          <img src="/logo.svg" alt="Express Logistics Logo" className="login-logo" style={{ display: 'block', width: '260px' }} />
+
         </div>
         <form className="login-card__form" onSubmit={handleSubmit}>
           <div>
             <h2>Welcome back</h2>
-            <p>Use your assigned account to enter the fleet workspace.</p>
+            <p>Log in to monitor and manage your fleet</p>
           </div>
           <label className="input-group">
             <span>Email</span>
@@ -58,14 +50,10 @@ export function Login() {
               value={password}
             />
           </label>
-          {import.meta.env.DEV ? (
-            <div className="login-hint">
-              Dev seeded account: <strong>manager@fleetcontrol.dev</strong> / <strong>password123</strong>
-            </div>
-          ) : null}
+
           {error ? <div className="form-error">{error}</div> : null}
-          <button className="primary-button" disabled={isSubmitting} type="submit">
-            {isSubmitting ? 'Signing in...' : 'Sign in'}
+          <button className="primary-button login-button" disabled={isSubmitting} type="submit">
+            {isSubmitting ? 'Logging in...' : 'Login'}
           </button>
         </form>
       </div>
