@@ -3801,139 +3801,176 @@ body {
   box-shadow: 0 0 0 2px rgba(37, 59, 128, 0.08);
 }
 
-/* ── Table ── */
-.dd-tbl {
-  border-radius: 10px;
-  border: 1px solid rgba(11, 15, 25, 0.06);
-  overflow: hidden;
+/* ═══════════════════════════════════════════════════════════════════
+   PREMIUM DD- DESIGN SYSTEM EXTENSION
+   ═══════════════════════════════════════════════════════════════════ */
+
+.dd {
+  display: flex;
+  flex-direction: column;
+  color: #111827;
 }
 
-.dd-tbl__head {
+.dd-grid {
   display: grid;
-  grid-template-columns: 1.5fr 0.8fr 1fr 1.2fr 0.8fr;
-  gap: 12px;
-  padding: 10px 16px;
-  background: rgba(11, 15, 25, 0.025);
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: var(--color-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  grid-template-columns: 1fr;
+  gap: 24px;
 }
 
-.dd-tbl__row {
-  display: grid;
-  grid-template-columns: 1.5fr 0.8fr 1fr 1.2fr 0.8fr;
-  gap: 12px;
-  padding: 11px 16px;
-  border: 0;
-  border-top: 1px solid rgba(11, 15, 25, 0.04);
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
-  width: 100%;
-  font-size: 0.84rem;
-  transition: background 0.1s;
-  color: var(--color-text);
-}
-
-.dd-tbl__row:hover { background: rgba(37, 59, 128, 0.02); }
-
-.dd-tbl__row--sel {
-  background: rgba(37, 59, 128, 0.04);
-  border-left: 3px solid #253B80;
-}
-
-.dd-tbl__row strong { display: block; font-weight: 600; font-size: 0.82rem; }
-.dd-tbl__row small { display: block; color: var(--color-muted); font-size: 0.72rem; margin-top: 1px; }
-
-/* ── MapView override (match dd- design) ── */
-.dd-map-wrap {
+.dd-card {
+  background: #fff;
   border-radius: 12px;
   border: 1px solid rgba(11, 15, 25, 0.06);
-  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
   overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.dd-map-wrap .panel {
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  background: transparent;
-  padding: 0;
+.dd-card:hover {
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05);
 }
 
-.dd-map-wrap .panel__header {
-  padding: 14px 20px 0;
+.dd-card__head {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(11, 15, 25, 0.04);
 }
 
-.dd-map-wrap .panel__header h3 {
+.dd-card__head h4 {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: 0.95rem;
   font-weight: 700;
-  color: var(--color-text);
+  color: #111827;
+}
+
+/* ── Stats ── */
+.dd-topbar {
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid rgba(11, 15, 25, 0.06);
+  padding: 2px;
+}
+
+.dd-stats-row {
+  display: flex;
+  gap: 1px;
+  background: rgba(11, 15, 25, 0.04);
+}
+
+.dd-stat {
+  flex: 1;
+  background: #fff;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.dd-stat:first-child { border-radius: 12px 0 0 12px; }
+.dd-stat:last-child { border-radius: 0 12px 12px 0; }
+
+.dd-stat__n {
+  font-size: 1.875rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.dd-stat__l {
+  margin-top: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* ── Pills / Badges ── */
+.dd-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.68rem;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
-.dd-map-wrap .panel__header p {
-  margin: 2px 0 0;
-  font-size: 0.72rem;
-}
+.dd-pill--gray  { background: #f3f4f6; color: #4b5563; }
+.dd-pill--blue  { background: #eff6ff; color: #2563eb; }
+.dd-pill--rose  { background: #fff1f2; color: #e11d48; }
+.dd-pill--amber { background: #fffbeb; color: #d97706; }
+.dd-pill--green { background: #f0fdf4; color: #16a34a; }
+.dd-pill--violet { background: #f5f3ff; color: #7c3aed; }
 
-.dd-map-wrap .map-view {
-  gap: 12px;
-}
-
-.dd-map-wrap .map-view__canvas {
-  min-height: 200px;
-  margin: 0 16px;
-  border-radius: 10px;
-  background:
-    linear-gradient(135deg, rgba(37, 59, 128, 0.06), rgba(16, 185, 129, 0.06)),
-    repeating-linear-gradient(0deg,
-      rgba(11, 15, 25, 0.02),
-      rgba(11, 15, 25, 0.02) 28px,
-      transparent 28px,
-      transparent 56px);
-}
-
-.dd-map-wrap .map-view__route-line {
-  background: rgba(37, 59, 128, 0.15);
-  height: 4px;
-}
-
-.dd-map-wrap .map-view__marker {
-  width: 28px;
-  height: 28px;
-  border: 3px solid #253B80;
-  top: calc(50% - 14px);
-  box-shadow: 0 2px 8px rgba(11, 15, 25, 0.1);
-}
-
-.dd-map-wrap .map-view__stops {
-  padding: 0 16px 14px;
-  gap: 6px;
-}
-
-.dd-map-wrap .map-view__stops .badge {
-  background: rgba(37, 59, 128, 0.06);
-  color: #253B80;
-  border: 1px solid rgba(37, 59, 128, 0.08);
-  border-radius: 6px;
-  font-size: 0.72rem;
+/* ── Buttons ── */
+.dd-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.875rem;
   font-weight: 600;
-  padding: 3px 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
 }
 
-/* ── Responsive ── */
-@media (max-width: 900px) {
-  .dd-stats-row { flex-wrap: wrap; gap: 12px; }
-  .dd-hero__row { flex-direction: column; align-items: flex-start; }
-  .dd-hero__metrics { flex-wrap: wrap; }
-  .dd-hero__route { flex-direction: column; gap: 6px; align-items: flex-start; }
-  .dd-route-connector { min-width: 0; width: 50px; transform: rotate(90deg); margin: 4px 0; }
-  .dd-grid { grid-template-columns: 1fr; }
-  .dd-form__row { grid-template-columns: 1fr 1fr; }
-  .dd-tbl__head, .dd-tbl__row { grid-template-columns: 1fr; }
+.dd-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
+
+.dd-btn--primary {
+  background: #253B80;
+  color: #fff;
+}
+
+.dd-btn--primary:hover:not(:disabled) {
+  background: #1e3066;
+  transform: translateY(-1px);
+}
+
+.dd-btn--secondary {
+  background: #fff;
+  border-color: #e5e7eb;
+  color: #374151;
+}
+
+.dd-btn--secondary:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+/* ── Utilities ── */
+.dd-loading {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.dd-toast {
+  padding: 12px 20px;
+  background: #111827;
+  color: #fff;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.dd-p-20 { padding: 20px; }
+.muted { color: #6b7280; font-size: 0.875rem; }

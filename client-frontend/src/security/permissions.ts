@@ -79,7 +79,7 @@ export function canManageMaintenance(role: string | undefined) {
 }
 
 export function canManageAlerts(role: string | undefined) {
-  return hasAnyRole(role, ['ADMIN', 'OPERATIONS_MANAGER', 'DISPATCHER', 'MAINTENANCE_MANAGER'])
+  return hasAnyRole(role, ['ADMIN', 'OPERATIONS_MANAGER', 'DISPATCHER', 'MAINTENANCE_MANAGER', 'DRIVER'])
 }
 
 export function canAccessAnalytics(role: string | undefined) {

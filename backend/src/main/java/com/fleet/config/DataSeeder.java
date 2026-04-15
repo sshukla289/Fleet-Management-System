@@ -227,18 +227,18 @@ public class DataSeeder {
                 appUserRepository,
                 passwordEncoder,
                 "USR-1",
-                "Manager Operations",
-                AppRole.FLEET_MANAGER,
-                "fleet_manager@gmail.com",
+                "Operations Manager Console",
+                AppRole.OPERATIONS_MANAGER,
+                "operations_manager@gmail.com",
                 "West and South India",
-                "fleet_manager@gmail.com",
+                "operations_manager@gmail.com",
                 "password"
             );
             upsertUser(
                 appUserRepository,
                 passwordEncoder,
                 "USR-2",
-                "Admin Operations",
+                "Super Admin Console",
                 AppRole.ADMIN,
                 "admin@gmail.com",
                 "Global",
@@ -249,18 +249,29 @@ public class DataSeeder {
                 appUserRepository,
                 passwordEncoder,
                 "USR-3",
-                "Dispatch Planner",
-                AppRole.DISPATCHER_PLANNER,
-                "dispatcher_planner@gmail.com",
+                "Dispatcher Console",
+                AppRole.DISPATCHER,
+                "dispatcher@gmail.com",
                 "West Corridor",
-                "dispatcher_planner@gmail.com",
+                "dispatcher@gmail.com",
+                "password"
+            );
+            upsertUser(
+                appUserRepository,
+                passwordEncoder,
+                "USR-5",
+                "Route Planner Console",
+                AppRole.PLANNER,
+                "planner@gmail.com",
+                "Regional Hubs",
+                "planner@gmail.com",
                 "password"
             );
             upsertUser(
                 appUserRepository,
                 passwordEncoder,
                 "USR-4",
-                "Maintenance Lead",
+                "Maintenance Manager Console",
                 AppRole.MAINTENANCE_MANAGER,
                 "maintenance_manager@gmail.com",
                 "Workshop Bay",
@@ -271,10 +282,10 @@ public class DataSeeder {
                 appUserRepository,
                 passwordEncoder,
                 "DR-201",
-                "Driver Console",
+                "Driver Execution Console",
                 AppRole.DRIVER,
                 "driver@gmail.com",
-                "Field",
+                "Field Operations",
                 "driver@gmail.com",
                 "password"
             );

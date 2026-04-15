@@ -143,7 +143,7 @@ function App() {
           <Route index element={<OperationsDashboard />} />
         </Route>
 
-        <Route element={<RoleRoute allowedRoles={['ADMIN', 'OPERATIONS_MANAGER', 'DISPATCHER', 'PLANNER', 'MAINTENANCE_MANAGER']} />}>
+        <Route element={<RoleRoute allowedRoles={['ADMIN', 'OPERATIONS_MANAGER', 'DISPATCHER', 'PLANNER', 'MAINTENANCE_MANAGER', 'DRIVER']} />}>
           <Route path="/dashboard" element={<Navigate to={defaultPath} replace />} />
           <Route path="/analytics/reports" element={<AnalyticsReports />} />
         </Route>

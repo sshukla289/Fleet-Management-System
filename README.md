@@ -172,25 +172,26 @@ Controller-level RBAC allows drivers to access some trip, telemetry, alert, and 
 
 ## Roles and responsibilities
 
-The system currently supports five roles:
+The system currently supports six distinct operational roles:
 
 | Role | Purpose |
 | --- | --- |
-| `ADMIN` | Full administrative control, including user-role management |
-| `FLEET_MANAGER` | Fleet-wide operational control across planning, maintenance, analytics, and audit visibility |
-| `DISPATCHER_PLANNER` | Day-to-day route, driver, and trip planning and dispatch operations |
-| `MAINTENANCE_MANAGER` | Maintenance scheduling, maintenance issue handling, operational visibility, and exception review |
-| `DRIVER` | Execute assigned trips, submit telemetry, and monitor only driver-relevant data |
+| `ADMIN` | Full administrative control, user-role management, and audit governance. |
+| `OPERATIONS_MANAGER` | Strategic fleet intelligence: KPIs, trends, and operational efficiency analysis. |
+| `DISPATCHER` | Live fleet command: monitoring, driver assignment, and real-time alert handling. |
+| `PLANNER` | Strategic planning: building routes, sequencing stops, and optimizing for efficiency. |
+| `MAINTENANCE_MANAGER` | Maintenance cockpit: service orders, vehicle health, and workshop schedules. |
+| `DRIVER` | Field execution: active trip management, route execution, and operational checklists. |
 
 ### Role-by-role explanation
 
 #### Admin
 
-Admin can use the full system. This role is the only one allowed to manage user roles through the admin API.
+Admin can use the full system. This role is the only one allowed to manage user roles through the admin API and access the Admin Dashboard.
 
 Typical tasks:
 
-- view all operational data
+- view all operational data and system stats
 - create, update, and delete vehicles
 - create, update, and delete drivers
 - create, update, and delete routes
@@ -198,53 +199,60 @@ Typical tasks:
 - view audit logs
 - reassign user roles
 
-#### Fleet Manager
+#### Operations Manager
 
-Fleet Manager is the main operational owner of the fleet. This role has broad control over operations, but not user-role administration.
-
-Typical tasks:
-
-- create and manage vehicles
-- manage routes and drivers
-- create, validate, optimize, dispatch, and cancel trips
-- review maintenance issues and schedules
-- review compliance, dashboard metrics, alerts, and analytics
-- review audit logs
-
-#### Dispatcher / Planner
-
-Dispatcher / Planner focuses on routing, driver coordination, and trip execution readiness.
+Operations Manager focuses on strategic fleet intelligence and overall efficiency.
 
 Typical tasks:
 
-- manage drivers and route plans
-- create trips
-- validate, optimize, dispatch, start, complete, and cancel trips
-- view vehicles, maintenance data, dashboard data, analytics, alerts, and compliance results
-- assign driver shifts
+- monitor KPI trends for the entire fleet
+- analyze delay and fuel efficiency patterns
+- review fleet-wide dashboard analytics
+- review critical alerts and exceptions
+
+#### Dispatcher
+
+Dispatcher manages live operations, driver assignments, and trip execution.
+
+Typical tasks:
+
+- monitor active trips in real-time
+- assign and reassign drivers to trips
+- handle live alerts and trip exceptions
+- coordinate with drivers during transit
+
+#### Planner
+
+Planner is responsible for strategic route building and trip scheduling.
+
+Typical tasks:
+
+- build and optimize route plans
+- sequence stops for maximum efficiency
+- create and schedule future trips
+- validate route safety and compliance
 
 #### Maintenance Manager
 
-Maintenance Manager controls maintenance operations and can participate in operational monitoring, but does not manage trips end-to-end.
+Maintenance Manager controls maintenance operations and vehicle health.
 
 Typical tasks:
 
 - create and manage maintenance alerts
-- create maintenance schedules
-- view trips, telemetry, vehicles, routes, alerts, dashboard metrics, analytics, and compliance checks
-- acknowledge and resolve alerts
+- create maintenance schedules and workshop visits
+- view vehicle health stats and maintenance trends
+- acknowledge and resolve maintenance-related issues
 
 #### Driver
 
-Driver is an execution-focused role with the narrowest permissions.
+Driver is an execution-focused role with access to own active assignments.
 
 Typical tasks:
 
-- view only assigned trips
-- start and complete only own trips
-- submit and view telemetry only for own assigned or active trip context
-- view driver-visible alerts and notifications related to own work
-- manage own profile and password
+- manage active trip checklists (pickup, documents, delivery)
+- view trip timeline and navigation
+- monitor trip-specific safety and compliance alerts
+- sign off on completed trips
 
 ## RBAC capability matrix
 
@@ -311,36 +319,36 @@ These demo accounts are available only when seeding is enabled. They are meant f
 
 | Role | Display name | User ID | Login email | Password | Assigned region | Typical use |
 | --- | --- | --- | --- | --- | --- | --- |
-| Fleet Manager | `Manager Operations` | `USR-1` | `fleet_manager@gmail.com` | `password` | `West and South India` | Full operations walkthrough |
-| Admin | `Admin Operations` | `USR-2` | `admin@gmail.com` | `password` | `Global` | User administration and full access |
-| Dispatcher / Planner | `Dispatch Planner` | `USR-3` | `dispatcher_planner@gmail.com` | `password` | `West Corridor` | Trip and route operations |
-| Maintenance Manager | `Maintenance Lead` | `USR-4` | `maintenance_manager@gmail.com` | `password` | `Workshop Bay` | Maintenance flows |
-| Driver | `Driver Console` | `DR-201` | `driver@gmail.com` | `password` | `Field` | Driver-only experience |
+| Admin | `Super Admin Console` | `USR-2` | `admin@gmail.com` | `password` | `Global` | User administration and full access |
+| Operations Manager | `Operations Manager Console` | `USR-1` | `operations_manager@gmail.com` | `password` | `West and South India` | Strategic fleet intelligence |
+| Dispatcher | `Dispatcher Console` | `USR-3` | `dispatcher@gmail.com` | `password` | `West Corridor` | Live fleet control |
+| Planner | `Route Planner Console` | `USR-5` | `planner@gmail.com` | `password` | `Regional Hubs` | Strategic route planning |
+| Maintenance Manager | `Maintenance Manager Console` | `USR-4` | `maintenance_manager@gmail.com` | `password` | `Workshop Bay` | Maintenance cockpit |
+| Driver | `Driver Execution Console` | `DR-201` | `driver@gmail.com` | `password` | `Field Operations` | Driver operational flow |
 
 ### Copy-paste credentials
 
 #### Admin
-
 - Email: `admin@gmail.com`
 - Password: `password`
 
-#### Fleet Manager
-
-- Email: `fleet_manager@gmail.com`
+#### Operations Manager
+- Email: `operations_manager@gmail.com`
 - Password: `password`
 
-#### Dispatcher / Planner
+#### Dispatcher
+- Email: `dispatcher@gmail.com`
+- Password: `password`
 
-- Email: `dispatcher_planner@gmail.com`
+#### Planner
+- Email: `planner@gmail.com`
 - Password: `password`
 
 #### Maintenance Manager
-
 - Email: `maintenance_manager@gmail.com`
 - Password: `password`
 
 #### Driver
-
 - Email: `driver@gmail.com`
 - Password: `password`
 
@@ -526,52 +534,46 @@ http://localhost:8080/api
 
 This sequence is a good way to understand the product quickly.
 
-### Fleet Manager walkthrough
+### Operations Manager walkthrough
 
-1. Sign in as `manager@fleetcontrol.dev`.
-2. Open the dashboard to review KPIs, action queue, and exceptions.
-3. Open Vehicles and Drivers to inspect fleet resources.
-4. Open Routes to review or create a route plan.
-5. Open Trips and create a new trip.
-6. Validate the trip.
-7. Optimize the trip.
-8. Dispatch the trip.
-9. Open telemetry and alerts to monitor execution.
-10. Review analytics and audit logs.
+1. Sign in as `operations_manager@gmail.com`.
+2. Open the dashboard to review high-level KPIs and performance trends.
+3. Review analytics reports for long-term fleet utilization.
 
-### Dispatcher / Planner walkthrough
+### Dispatcher walkthrough
 
-1. Sign in as `dispatcher@fleetcontrol.dev`.
-2. Review drivers and assign a shift if needed.
-3. Review or optimize routes.
-4. Create a trip.
-5. Validate and optimize the trip.
-6. Dispatch the trip.
-7. Track trip telemetry and open alerts.
+1. Sign in as `dispatcher@gmail.com`.
+2. Monitor live trips and vehicle locations.
+3. Handle incoming alerts and coordinate with field drivers.
+4. Perform driver-trip reassignments in real-time.
+
+### Planner walkthrough
+
+1. Sign in as `planner@gmail.com`.
+2. Build and optimize new route plans.
+3. Sequence stops and schedule upcoming trip cycles.
+4. Validate compliance and safety metrics for planned routes.
 
 ### Maintenance Manager walkthrough
 
-1. Sign in as `maintenance@fleetcontrol.dev`.
-2. Review maintenance alerts.
-3. Create or update maintenance alerts and schedules.
-4. Check dashboard exceptions and compliance status.
-5. Review affected trips, vehicles, routes, and alerts.
+1. Sign in as `maintenance_manager@gmail.com`.
+2. Review service alerts and workshop status.
+3. Schedule new maintenance visits and sign off on completed repairs.
+4. Monitor vehicle health trends to prevent operational downtime.
 
 ### Driver walkthrough
 
-1. Sign in as `driver@fleetcontrol.dev`.
-2. Open trips and view only assigned work.
-3. Start an assigned trip.
-4. Submit or review telemetry for the assigned trip or vehicle.
-5. Complete the trip after execution.
-6. Review driver-visible alerts and notifications.
+1. Sign in as `driver@gmail.com`.
+2. Access the active trip cockpit to view routes and stops.
+3. Use operational checklists for pickups and deliveries.
+4. Monitor live timeline and navigation context.
 
 ### Admin walkthrough
 
-1. Sign in as `admin@fleetcontrol.dev`.
-2. Review the full operational workspace.
-3. Open admin user management.
-4. View users and change roles through the admin API or admin UI flow.
+1. Sign in as `admin@gmail.com`.
+2. Review systemic operational oversight.
+3. Access Admin User Management to manage permissions and roles.
+4. Review global audit logs for security oversight.
 
 ## API overview
 

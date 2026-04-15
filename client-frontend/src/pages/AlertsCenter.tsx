@@ -1,45 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
-import { PageHeader } from '../components/PageHeader'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useAuth } from '../context/useAuth'
-import { canManageAlerts } from '../security/permissions'
-import { acknowledgeAlert, fetchAlerts, resolveAlert } from '../services/apiService'
+import { acknowledgeAlert, fetchAlerts, resolveAlert, fetchTrips } from '../services/apiService'
 import type { Alert, AlertLifecycleStatus, AlertSeverity } from '../types'
 
 type StatusFilter = AlertLifecycleStatus | 'ALL'
 type SeverityFilter = AlertSeverity | 'ALL'
-
-function severityClass(severity: AlertSeverity) {
-  switch (severity) {
-    case 'CRITICAL':
-      return 'status-pill status-pill--rose'
-    case 'HIGH':
-      return 'status-pill status-pill--amber'
-    case 'MEDIUM':
-      return 'status-pill status-pill--blue'
-    default:
-      return 'status-pill status-pill--mint'
-  }
-}
-
-function statusClass(status: AlertLifecycleStatus) {
-  switch (status) {
-    case 'OPEN':
-      return 'status-pill status-pill--rose'
-    case 'ACKNOWLEDGED':
-      return 'status-pill status-pill--amber'
-    case 'IN_PROGRESS':
-      return 'status-pill status-pill--blue'
-    case 'RESOLVED':
-      return 'status-pill status-pill--mint'
-    default:
-      return 'status-pill'
-  }
-}
-
-function formatTime(value: string) {
-  const parsed = new Date(value)
-  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString()
-}
 
 export function AlertsCenter() {
   const { session } = useAuth()
@@ -49,185 +14,249 @@ export function AlertsCenter() {
   const [loading, setLoading] = useState(true)
   const [workingId, setWorkingId] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
-  const canManage = canManageAlerts(session?.profile.role)
+  
+  const currentRole = session?.profile.role
+  const currentUserId = session?.profile.id
+  const isDriver = currentRole === 'DRIVER'
 
-  async function loadAlerts() {
-    setLoading(true)
-    setMessage(null)
-
+  const loadData = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true)
     try {
-      setAlerts(await fetchAlerts())
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Unable to load alerts.')
+      const [allAlerts, allTrips] = await Promise.all([
+        fetchAlerts(),
+        fetchTrips()
+      ])
+
+      // If driver, filter alerts to only those related to driver's trips
+      if (isDriver) {
+        const myTripIds = allTrips
+          .filter(t => t.assignedDriverId === currentUserId)
+          .map(t => t.tripId)
+        
+        const filtered = allAlerts.filter(a => 
+          (a.relatedTripId && myTripIds.includes(a.relatedTripId)) ||
+          (a.relatedVehicleId && allTrips.some(t => t.assignedVehicleId === a.relatedVehicleId && t.assignedDriverId === currentUserId))
+        )
+        setAlerts(filtered)
+      } else {
+        setAlerts(allAlerts)
+      }
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Failed to sync alerts.')
     } finally {
-      setLoading(false)
+      if (showLoading) setLoading(false)
     }
-  }
+  }, [isDriver, currentUserId])
 
   useEffect(() => {
-    void loadAlerts()
-  }, [])
+    void loadData()
+    // Polling every 15 seconds for real-time feel
+    const timer = setInterval(() => void loadData(false), 15000)
+    return () => clearInterval(timer)
+  }, [loadData])
 
-  const filteredAlerts = useMemo(
-    () =>
-      alerts.filter((alert) => {
-        const matchesStatus = statusFilter === 'ALL' || alert.status === statusFilter
-        const matchesSeverity = severityFilter === 'ALL' || alert.severity === severityFilter
-        return matchesStatus && matchesSeverity
-      }),
-    [alerts, severityFilter, statusFilter],
-  )
+  const filteredAlerts = useMemo(() => {
+    // 1. Filter
+    const result = alerts.filter((alert) => {
+      const matchesStatus = statusFilter === 'ALL' || alert.status === statusFilter
+      const matchesSeverity = severityFilter === 'ALL' || alert.severity === severityFilter
+      return matchesStatus && matchesSeverity
+    })
 
-  async function handleAlertAction(id: string, action: 'acknowledge' | 'resolve') {
+    // 2. Sort: Severity first, then newest
+    const severityMap: Record<AlertSeverity, number> = {
+      CRITICAL: 4,
+      HIGH: 3,
+      MEDIUM: 2,
+      LOW: 1
+    }
+
+    return result.sort((a, b) => {
+      const sevA = severityMap[a.severity]
+      const sevB = severityMap[b.severity]
+      if (sevA !== sevB) return sevB - sevA
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    })
+  }, [alerts, severityFilter, statusFilter])
+
+  const handleAction = async (id: string, action: 'acknowledge' | 'resolve') => {
     setWorkingId(id)
-    setMessage(null)
-
     try {
-      if (action === 'acknowledge') {
-        await acknowledgeAlert(id)
-      } else {
-        await resolveAlert(id)
-      }
-      await loadAlerts()
-      setMessage(`Alert ${action}d successfully.`)
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Alert action failed.')
+      if (action === 'acknowledge') await acknowledgeAlert(id)
+      else await resolveAlert(id)
+      
+      // Update local state for immediate feedback
+      setAlerts(prev => prev.map(a => {
+        if (a.id === id) {
+          return { ...a, status: action === 'acknowledge' ? 'ACKNOWLEDGED' : 'RESOLVED' }
+        }
+        return a
+      }))
+      setMessage(`Alert ${action === 'acknowledge' ? 'acknowledged' : 'resolved'} successfully.`)
+      setTimeout(() => setMessage(null), 3000)
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Action failed.')
     } finally {
       setWorkingId(null)
     }
   }
 
-  const criticalAlerts = alerts.filter((alert) => alert.severity === 'CRITICAL').length
-  const openAlerts = alerts.filter((alert) => alert.status === 'OPEN').length
-  const acknowledgedAlerts = alerts.filter((alert) => alert.status === 'ACKNOWLEDGED').length
+  // Stats for cards
+  const stats = {
+    total: alerts.length,
+    open: alerts.filter(a => a.status === 'OPEN').length,
+    critical: alerts.filter(a => a.severity === 'CRITICAL').length,
+    acknowledged: alerts.filter(a => a.status === 'ACKNOWLEDGED').length
+  }
+
+  if (loading && alerts.length === 0) {
+    return <div className="dd-loading">Syncing operational alert stream...</div>
+  }
 
   return (
-    <div className="page-shell">
-      <PageHeader
-        eyebrow="Alert center"
-        title="Alerts Center"
-        description="Track maintenance, compliance, dispatch exceptions, and live telemetry alerts from one operational board."
-        actionLabel="Refresh alerts"
-        actionDisabled={loading}
-        onAction={() => {
-          void loadAlerts()
-        }}
-      />
+    <div className="dd">
+      <header className="dd-header" style={{ marginBottom: '24px' }}>
+        <div>
+          <span className="dd-stat__l" style={{ fontSize: '0.875rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Safety & Exception Monitoring</span>
+          <h1 style={{ fontSize: '1.875rem', fontWeight: 700, color: '#111827', marginTop: '4px' }}>Alerts Center</h1>
+        </div>
+        <button className="dd-btn dd-btn--primary" onClick={() => void loadData()}>Refresh Feed</button>
+      </header>
 
-      {message ? <div className="notice">{message}</div> : null}
+      {message && <div className="dd-toast">{message}</div>}
 
-      <section className="dashboard-stats">
-        {[
-          { label: 'Alerts', value: alerts.length, note: 'Total records in the alert engine' },
-          { label: 'Open', value: openAlerts, note: 'Alerts waiting on action' },
-          { label: 'Critical', value: criticalAlerts, note: 'Requires immediate attention' },
-          { label: 'Acknowledged', value: acknowledgedAlerts, note: 'Alerts already reviewed' },
-        ].map((stat) => (
-          <article key={stat.label} className="stat-card">
-            <span>{stat.label}</span>
-            <strong>{stat.value}</strong>
-            <small>{stat.note}</small>
-          </article>
-        ))}
-      </section>
-
-      <section className="panel">
-        <div className="panel__header">
-          <div>
-            <h3>Alert filters</h3>
-            <p className="muted">Filter by lifecycle state and severity to focus on the queue that matters right now.</p>
+      {/* Dynamic Header Stats */}
+      <section className="dd-topbar" style={{ marginBottom: '24px' }}>
+        <div className="dd-stats-row">
+          <div className="dd-stat">
+            <span className="dd-stat__n" style={{ color: '#253B80' }}>{stats.total}</span>
+            <span className="dd-stat__l">Total Alerts</span>
+          </div>
+          <div className="dd-stat">
+            <span className="dd-stat__n" style={{ color: '#f59e0b' }}>{stats.open}</span>
+            <span className="dd-stat__l">Open</span>
+          </div>
+          <div className="dd-stat">
+            <span className="dd-stat__n" style={{ color: '#ef4444' }}>{stats.critical}</span>
+            <span className="dd-stat__l">Critical</span>
+          </div>
+          <div className="dd-stat">
+            <span className="dd-stat__n" style={{ color: '#3b82f6' }}>{stats.acknowledged}</span>
+            <span className="dd-stat__l">Acknowledged</span>
           </div>
         </div>
-
-        <div className="inline-filters">
-          {(['ALL', 'OPEN', 'ACKNOWLEDGED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'] as StatusFilter[]).map((status) => (
-            <button
-              key={status}
-              className={`filter-chip${statusFilter === status ? ' filter-chip--active' : ''}`}
-              type="button"
-              onClick={() => setStatusFilter(status)}
-            >
-              {status}
-            </button>
-          ))}
-        </div>
-        <div className="inline-filters">
-          {(['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as SeverityFilter[]).map((severity) => (
-            <button
-              key={severity}
-              className={`filter-chip${severityFilter === severity ? ' filter-chip--active' : ''}`}
-              type="button"
-              onClick={() => setSeverityFilter(severity)}
-            >
-              {severity}
-            </button>
-          ))}
-        </div>
       </section>
 
-      <section className="dashboard-section">
-        <div className="dashboard-section__header">
-          <div>
-            <span className="dashboard-section__eyebrow">Queue</span>
-            <h2 className="dashboard-section__title">Operational alerts</h2>
+      {/* Filter Panel */}
+      <section className="dd-card" style={{ marginBottom: '24px' }}>
+        <div className="dd-card__head"><h4>Stream Filters</h4></div>
+        <div style={{ padding: '20px', borderTop: '1px solid #f3f4f6' }}>
+          <div style={{ marginBottom: '16px' }}>
+            <small style={{ display: 'block', marginBottom: '8px', color: '#6b7280', fontWeight: 600 }}>Lifecycle Status</small>
+            <div className="dd-pill-group" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {['ALL', 'OPEN', 'ACKNOWLEDGED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'].map(s => (
+                <button 
+                  key={s} 
+                  className={`dd-pill ${statusFilter === s ? 'dd-pill--blue' : 'dd-pill--gray'}`}
+                  style={{ border: 'none', cursor: 'pointer' }}
+                  onClick={() => setStatusFilter(s as StatusFilter)}
+                >{s}</button>
+              ))}
+            </div>
           </div>
-          <span className="dashboard-section__counter">{filteredAlerts.length} visible</span>
-        </div>
-
-        <div className="alerts-grid">
-          {loading ? (
-            <article className="panel">
-              <p className="muted">Loading alerts...</p>
-            </article>
-          ) : filteredAlerts.length ? (
-            filteredAlerts.map((alert) => (
-              <article key={alert.id} className="alert-card">
-                <div className="alert-card__header">
-                  <div>
-                    <span className="dashboard-card-header__eyebrow">{alert.category}</span>
-                    <h3>{alert.title}</h3>
-                  </div>
-                  <div className="alert-card__chips">
-                    <span className={severityClass(alert.severity)}>{alert.severity}</span>
-                    <span className={statusClass(alert.status)}>{alert.status}</span>
-                  </div>
-                </div>
-
-                <p className="muted">{alert.description}</p>
-
-                <div className="alert-card__meta">
-                  <span>{alert.relatedTripId ? `Trip ${alert.relatedTripId}` : 'No trip link'}</span>
-                  <span>{alert.relatedVehicleId ? `Vehicle ${alert.relatedVehicleId}` : 'No vehicle link'}</span>
-                  <span>{formatTime(alert.createdAt)}</span>
-                </div>
-
-                <div className="alert-card__actions">
-                  <button
-                    className="secondary-button"
-                    disabled={!canManage || workingId === alert.id || alert.status === 'CLOSED' || alert.status === 'RESOLVED'}
-                    type="button"
-                    onClick={() => void handleAlertAction(alert.id, 'acknowledge')}
-                  >
-                    {workingId === alert.id ? 'Working...' : 'Acknowledge'}
-                  </button>
-                  <button
-                    className="primary-button"
-                    disabled={!canManage || workingId === alert.id || alert.status === 'CLOSED' || alert.status === 'RESOLVED'}
-                    type="button"
-                    onClick={() => void handleAlertAction(alert.id, 'resolve')}
-                  >
-                    {workingId === alert.id ? 'Working...' : 'Resolve'}
-                  </button>
-                </div>
-              </article>
-            ))
-          ) : (
-            <article className="panel">
-              <p className="muted">No alerts match the current filters.</p>
-            </article>
-          )}
+          <div>
+            <small style={{ display: 'block', marginBottom: '8px', color: '#6b7280', fontWeight: 600 }}>Severity Level</small>
+            <div className="dd-pill-group" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map(s => (
+                <button 
+                  key={s} 
+                  className={`dd-pill ${severityFilter === s ? 'dd-pill--rose' : 'dd-pill--gray'}`}
+                  style={{ border: 'none', cursor: 'pointer' }}
+                  onClick={() => setSeverityFilter(s as SeverityFilter)}
+                >{s}</button>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
+
+      {/* Alerts Grid */}
+      <div className="dd-grid">
+        <div className="dd-grid__main">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '20px' }}>
+            {filteredAlerts.length > 0 ? (
+              filteredAlerts.map(alert => (
+                <article key={alert.id} className="dd-card" style={{ display: 'flex', flexDirection: 'column' }}>
+                  <div className="dd-card__head" style={{ alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1 }}>
+                      <span className="dd-pill dd-pill--gray" style={{ fontSize: '0.6rem', marginBottom: '4px' }}>{alert.category.replace('_', ' ')}</span>
+                      <h4 style={{ margin: 0 }}>{alert.title}</h4>
+                    </div>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <span className={`dd-pill ${
+                        alert.severity === 'CRITICAL' ? 'dd-pill--rose' : 
+                        alert.severity === 'HIGH' ? 'dd-pill--amber' :
+                        alert.severity === 'MEDIUM' ? 'dd-pill--blue' : 'dd-pill--gray'
+                      }`}>{alert.severity}</span>
+                      <span className={`dd-pill ${
+                        alert.status === 'RESOLVED' ? 'dd-pill--green' :
+                        alert.status === 'OPEN' ? 'dd-pill--rose' : 'dd-pill--blue'
+                      }`}>{alert.status}</span>
+                    </div>
+                  </div>
+                  
+                  <div style={{ padding: '20px', flex: 1 }}>
+                    <p style={{ color: '#4b5563', fontSize: '0.875rem', lineHeight: 1.5, margin: 0 }}>{alert.description}</p>
+                    
+                    <div style={{ marginTop: '16px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                      {alert.relatedTripId && (
+                        <div style={{ background: '#f8fafc', padding: '6px 10px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
+                          <small style={{ color: '#64748b' }}>Trip: </small>
+                          <small style={{ fontWeight: 600 }}>{alert.relatedTripId}</small>
+                        </div>
+                      )}
+                      {alert.relatedVehicleId && (
+                        <div style={{ background: '#f8fafc', padding: '6px 10px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
+                          <small style={{ color: '#64748b' }}>Vehicle: </small>
+                          <small style={{ fontWeight: 600 }}>{alert.relatedVehicleId}</small>
+                        </div>
+                      )}
+                      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
+                        <small style={{ color: '#94a3b8' }}>{new Date(alert.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '12px 20px', borderTop: '1px solid #f1f5f9', background: '#f8fafc', display: 'flex', gap: '8px' }}>
+                    <button 
+                      className="dd-btn dd-btn--secondary" 
+                      style={{ flex: 1, padding: '8px' }}
+                      disabled={workingId === alert.id || alert.status !== 'OPEN'}
+                      onClick={() => handleAction(alert.id, 'acknowledge')}
+                    >
+                      {workingId === alert.id ? '...' : 'Acknowledge'}
+                    </button>
+                    <button 
+                      className="dd-btn dd-btn--primary" 
+                      style={{ flex: 1, padding: '8px' }}
+                      disabled={workingId === alert.id || (alert.status !== 'OPEN' && alert.status !== 'ACKNOWLEDGED')}
+                      onClick={() => handleAction(alert.id, 'resolve')}
+                    >
+                      {workingId === alert.id ? '...' : 'Resolve'}
+                    </button>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <div className="dd-card" style={{ gridColumn: '1 / -1', padding: '60px', textAlign: 'center' }}>
+                <div style={{ fontSize: '3rem', marginBottom: '16px' }}>✅</div>
+                <h4 style={{ color: '#111827' }}>No Alerts at the moment</h4>
+                <p className="muted">Your operational stream is clear. All systems are operating within normal parameters.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

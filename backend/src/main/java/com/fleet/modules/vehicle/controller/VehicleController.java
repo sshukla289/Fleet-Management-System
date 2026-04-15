@@ -27,13 +27,13 @@ public class VehicleController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','FLEET_MANAGER','DISPATCHER_PLANNER','MAINTENANCE_MANAGER','DRIVER')")
+    @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS_MANAGER','DISPATCHER','PLANNER','MAINTENANCE_MANAGER','DRIVER')")
     public ResponseEntity<List<VehicleDTO>> getVehicles() {
         return ResponseEntity.ok(vehicleService.getVehicles());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','FLEET_MANAGER','DISPATCHER_PLANNER','MAINTENANCE_MANAGER','DRIVER')")
+    @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS_MANAGER','DISPATCHER','PLANNER','MAINTENANCE_MANAGER','DRIVER')")
     public ResponseEntity<VehicleDTO> getVehicle(@PathVariable String id) {
         return vehicleService.getVehicleById(id)
             .map(ResponseEntity::ok)
@@ -41,19 +41,19 @@ public class VehicleController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN','FLEET_MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS_MANAGER','MAINTENANCE_MANAGER')")
     public ResponseEntity<VehicleDTO> createVehicle(@RequestBody CreateVehicleRequest request) {
         return ResponseEntity.ok(vehicleService.createVehicle(request));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','FLEET_MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS_MANAGER','MAINTENANCE_MANAGER')")
     public ResponseEntity<VehicleDTO> updateVehicle(@PathVariable String id, @RequestBody UpdateVehicleRequest request) {
         return ResponseEntity.ok(vehicleService.updateVehicle(id, request));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','FLEET_MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS_MANAGER','MAINTENANCE_MANAGER')")
     public ResponseEntity<Void> deleteVehicle(@PathVariable String id) {
         vehicleService.deleteVehicle(id);
         return ResponseEntity.noContent().build();

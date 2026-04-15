@@ -4,10 +4,11 @@ import java.util.Locale;
 
 public enum AppRole {
     ADMIN("Admin"),
-    FLEET_MANAGER("Fleet Manager"),
-    DISPATCHER_PLANNER("Dispatcher / Planner"),
-    MAINTENANCE_MANAGER("Maintenance Manager"),
-    DRIVER("Driver");
+    DRIVER("Driver"),
+    DISPATCHER("Dispatcher"),
+    PLANNER("Planner"),
+    OPERATIONS_MANAGER("Operations Manager"),
+    MAINTENANCE_MANAGER("Maintenance Manager");
 
     private final String label;
 
@@ -36,10 +37,11 @@ public enum AppRole {
 
         return switch (normalized) {
             case "ADMIN", "ROLE_ADMIN" -> ADMIN;
-            case "FLEET_MANAGER", "ROLE_FLEET_MANAGER", "FLEET_OPERATIONS_MANAGER", "FLEET_MANAGER_ADMIN" -> FLEET_MANAGER;
-            case "DISPATCHER", "PLANNER", "DISPATCHER_PLANNER", "DISPATCH_PLANNER", "ROLE_DISPATCHER_PLANNER" -> DISPATCHER_PLANNER;
-            case "MAINTENANCE_MANAGER", "ROLE_MAINTENANCE_MANAGER" -> MAINTENANCE_MANAGER;
             case "DRIVER", "ROLE_DRIVER" -> DRIVER;
+            case "DISPATCHER", "ROLE_DISPATCHER" -> DISPATCHER;
+            case "PLANNER", "ROLE_PLANNER" -> PLANNER;
+            case "OPERATIONS_MANAGER", "ROLE_OPERATIONS_MANAGER", "FLEET_MANAGER" -> OPERATIONS_MANAGER;
+            case "MAINTENANCE_MANAGER", "ROLE_MAINTENANCE_MANAGER" -> MAINTENANCE_MANAGER;
             default -> DRIVER;
         };
     }
