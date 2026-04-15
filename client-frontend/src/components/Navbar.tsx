@@ -91,7 +91,7 @@ function resolveTitle(pathname: string) {
 }
 
 export function Navbar() {
-  const { session, logout } = useAuth()
+  const { logout } = useAuth()
   const { pathname } = useLocation()
   const navigate = useNavigate()
 

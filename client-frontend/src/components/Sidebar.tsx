@@ -1,4 +1,4 @@
-import { useNavigate, NavLink } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import { hasAnyRole } from '../security/permissions'
 import type { AppRole } from '../types'
@@ -43,8 +43,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
-  const { logout, session } = useAuth()
-  const navigate = useNavigate()
+  const { session } = useAuth()
   const role = session?.profile.role
   const visibleGroups = groups
     .map((group) => ({

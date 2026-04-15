@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
 import { MapView } from '../components/MapView'
-import { useAuth } from '../context/useAuth'
 import {
   fetchTrips,
   fetchTripTelemetry,
@@ -129,7 +128,7 @@ export function DriverDashboard() {
       }, 15000)
       return () => clearInterval(interval)
     }
-  }, [activeTrip])
+  }, [activeTrip, refreshTripData])
 
   const handleStart = async () => {
     if (!activeTrip) return
