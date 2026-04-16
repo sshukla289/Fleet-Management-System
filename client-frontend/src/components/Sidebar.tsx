@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import { hasAnyRole } from '../security/permissions'
 import type { AppRole } from '../types'
@@ -53,6 +53,8 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
     .filter((group) => group.items.length > 0)
 
 
+  const location = useLocation()
+
   return (
     <aside className={`sidebar${collapsed ? ' sidebar--collapsed' : ''}`}>
       {/* Collapse toggle */}
@@ -79,17 +81,24 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
         {visibleGroups.map((group) => (
           <div key={group.title} className="sidebar__section">
             <h2 className="sidebar__title">{group.title}</h2>
-            {group.items.map((item) => (
-              <NavLink
-                key={item.path}
-                className={({ isActive }) => `sidebar__link${isActive ? ' sidebar__link--active' : ''}`}
-                to={item.path}
-                title={collapsed ? item.label : undefined}
-              >
-                <span className="sidebar__icon">{item.icon}</span>
-                <span className="sidebar__link-label">{item.label}</span>
-              </NavLink>
-            ))}
+            {group.items.map((item) => {
+              const isDashboard = item.label === 'Dashboard'
+              const isActive = isDashboard 
+                ? location.pathname.endsWith('/dashboard') 
+                : location.pathname === item.path
+
+              return (
+                <NavLink
+                  key={item.path}
+                  className={`sidebar__link${isActive ? ' sidebar__link--active' : ''}`}
+                  to={item.path}
+                  title={collapsed ? item.label : undefined}
+                >
+                  <span className="sidebar__icon">{item.icon}</span>
+                  <span className="sidebar__link-label">{item.label}</span>
+                </NavLink>
+              )
+            })}
           </div>
         ))}
       </div>
