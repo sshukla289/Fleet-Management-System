@@ -14,7 +14,8 @@ import type {
   Trip, 
   RoutePlan,
   TripOptimizationResult,
-  TripStop
+  TripStop,
+  StopStatus
 } from '../types'
 
 export function PlannerDashboard() {
@@ -76,7 +77,7 @@ export function PlannerDashboard() {
     const stop: TripStop = {
       name: newStop.trim(),
       sequence: tripForm.stops.length + 1,
-      status: 'PENDING' as any
+      status: 'PENDING' as StopStatus
     }
 
     setTripForm(prev => ({ ...prev, stops: [...prev.stops, stop] }))

@@ -9,7 +9,8 @@ import {
   optimizeRoutes,
   updateRoutePlan,
 } from '../services/apiService'
-import type { CreateRoutePlanInput, RoutePlan } from '../types'
+import type { CreateRoutePlanInput, RoutePlan, StopStatus } from '../types'
+
 
 function routeStatusClass(status: RoutePlan['status']) {
   if (status === 'Completed') {
@@ -179,7 +180,7 @@ export function RoutePlanner() {
         .map((stop, index) => ({
           name: stop.trim(),
           sequence: index + 1,
-          status: 'PENDING' as any
+          status: 'PENDING' as StopStatus
         }))
 
         .filter((s) => s.name),

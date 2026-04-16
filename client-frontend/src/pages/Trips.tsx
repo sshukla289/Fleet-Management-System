@@ -150,7 +150,7 @@ export function Trips() {
       // We only fetch what is permitted based on role.
       const canViewAll = role === 'ADMIN' || role === 'OPERATIONS_MANAGER' || role === 'DISPATCHER' || role === 'PLANNER'
       
-      const fetchList: Promise<any>[] = [fetchTrips()]
+      const fetchList: Promise<Trip[] | Awaited<ReturnType<typeof fetchVehicles> | ReturnType<typeof fetchDrivers> | ReturnType<typeof fetchRoutePlans>>>[] = [fetchTrips()]
       if (canViewAll) {
         fetchList.push(fetchVehicles(), fetchDrivers(), fetchRoutePlans())
       }
@@ -162,9 +162,9 @@ export function Trips() {
 
       setSelectedTripId((current) => current ?? tripData[0]?.tripId ?? null)
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to load operational data:', error)
-      const errorMsg = error?.response?.status === 403 
+      const errorMsg = (error instanceof Error && error.message.includes('403'))
         ? 'Access restricted. Some data could not be loaded.'
         : (error instanceof Error ? error.message : 'Unable to load trip board.')
       setMessage(errorMsg)
@@ -224,8 +224,8 @@ export function Trips() {
     }
   }, [selectedTrip])
 
-  const activeTripStore = useTripStore((state) => state.activeTrip)
   const realTimeTelemetry = useTripStore((state) => state.telemetry)
+
   
   // Use our real-time hook
   useTripWebSocket(selectedTrip?.tripId)
