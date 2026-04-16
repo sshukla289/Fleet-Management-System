@@ -175,7 +175,9 @@ export function DriverDashboard() {
     if (!activeTrip) return
     setWorking(true)
     try {
-      const input: CompleteTripInput = { 
+      const input: CompleteTripInput = {
+        actualEndTime: new Date().toISOString(),
+        actualDistance: activeTrip.actualDistance || activeTrip.estimatedDistance || 0,
         remarks: 'Completed by driver from dashboard' 
       }
       await completeTrip(activeTrip.tripId, input)

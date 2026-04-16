@@ -156,7 +156,7 @@ export function Trips() {
       }
 
       const results = await Promise.all(fetchList)
-      const tripData = results[0]
+      const tripData = results[0] as Trip[]
       
       setTrips(tripData)
 
