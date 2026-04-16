@@ -23,7 +23,7 @@ export function VehicleDetail() {
           const telemetryData = await fetchVehicleTelemetry(vehicleData.id)
           setTelemetry(telemetryData)
         }
-      } catch (loadError) {
+      } catch {
         setTelemetry([])
       }
     }

@@ -112,8 +112,7 @@ export function Dashboard() {
       setActionQueue(queueData)
       setExceptions(exceptionData)
       setMaintenanceSchedules(scheduleData)
-    } catch (error) {
-    } finally {
+    } catch (error: unknown) { console.error(error);  console.error(); } finally {
       setLoading(false)
     }
   }

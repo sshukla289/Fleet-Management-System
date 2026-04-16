@@ -61,8 +61,7 @@ export function AnalyticsReports() {
       setTripAnalytics(tripData)
       setVehicleAnalytics(vehicleData)
       setDriverAnalytics(driverData)
-    } catch (error) {
-    } finally {
+    } catch (error: unknown) { console.error(error);  console.error(); } finally {
       setLoading(false)
       setWorking(false)
     }

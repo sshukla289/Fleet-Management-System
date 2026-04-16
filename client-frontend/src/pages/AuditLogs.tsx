@@ -29,8 +29,7 @@ export function AuditLogs() {
           ? await fetchAuditLogsByEntity(filters.entityType.trim(), filters.entityId.trim())
           : await fetchAuditLogs({ from: filters.from, to: filters.to })
       setItems(data)
-    } catch (error) {
-    } finally {
+    } catch (error: unknown) { console.error(error);  console.error(); } finally {
       setLoading(false)
       setWorking(false)
     }

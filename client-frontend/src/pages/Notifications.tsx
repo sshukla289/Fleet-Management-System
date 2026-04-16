@@ -32,8 +32,7 @@ export function Notifications() {
     try {
       const data = await fetchNotifications()
       setNotifications(data)
-    } catch (error) {
-    } finally {
+    } catch (error: unknown) { console.error(error);  console.error(); } finally {
       setLoading(false)
     }
   }
@@ -65,8 +64,7 @@ export function Notifications() {
     try {
       const updated = await markNotificationRead(id)
       setNotifications((current) => current.map((item) => (item.id === id ? updated : item)))
-    } catch (error) {
-    } finally {
+    } catch (error: unknown) { console.error(error);  console.error(); } finally {
       setWorking(false)
     }
   }
