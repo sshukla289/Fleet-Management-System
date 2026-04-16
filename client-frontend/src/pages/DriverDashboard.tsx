@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { MapView } from '../components/MapView'
+
 import { TripRoute } from '../components/TripRoute'
 import {
   fetchTrips,
@@ -11,9 +11,10 @@ import {
   updateStopStatus,
 } from '../services/apiService'
 import type {
-  Trip,
+
   TripTelemetryPoint,
   ComplianceCheckResult,
+  CompleteTripInput,
   Alert,
 } from '../types'
 import type { StopStatus } from '../types'
@@ -120,7 +121,7 @@ export function DriverDashboard() {
     } finally {
       setLoading(false)
     }
-  }, [refreshTripData])
+  }, [refreshTripData, setActiveTrip])
 
   useEffect(() => {
     void loadData()
@@ -174,8 +175,8 @@ export function DriverDashboard() {
     if (!activeTrip) return
     setWorking(true)
     try {
-      const input: any = { 
-        completionNotes: 'Completed by driver from dashboard' 
+      const input: CompleteTripInput = { 
+        remarks: 'Completed by driver from dashboard' 
       }
       await completeTrip(activeTrip.tripId, input)
       await loadData()

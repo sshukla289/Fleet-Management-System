@@ -196,6 +196,7 @@ export function Trips() {
     } catch { setTelemetry([]); setComplianceCheck(null); setSystemAlerts([]) }
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { void loadBoard() }, [])
 
   // Auto-dismiss toast messages after 5 seconds
