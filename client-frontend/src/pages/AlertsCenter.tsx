@@ -114,10 +114,11 @@ export function AlertsCenter() {
   }
 
   return (
-    <div className="page-shell">
-      <div className="page-top-actions">
-        <button className="secondary-button" onClick={() => void loadData()}>Refresh Feed</button>
-      </div>
+    <div className="dd">
+      <header className="dd-header" style={{ marginBottom: '24px', justifyContent: 'flex-end' }}>
+        <button className="dd-btn dd-btn--primary" onClick={() => void loadData()}>Refresh Feed</button>
+      </header>
+
 
       {message && <div className="dd-toast">{message}</div>}
 

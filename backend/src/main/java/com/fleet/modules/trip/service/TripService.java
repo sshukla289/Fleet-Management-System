@@ -11,16 +11,22 @@ import com.fleet.modules.trip.dto.CreateTripRequest;
 import com.fleet.modules.trip.dto.TripDTO;
 import com.fleet.modules.trip.dto.TripOptimizationResultDTO;
 import com.fleet.modules.trip.dto.TripValidationResultDTO;
+import com.fleet.modules.trip.dto.TripStopDTO;
+import com.fleet.modules.trip.entity.TripStop;
 import com.fleet.modules.notification.service.NotificationService;
+
 import com.fleet.modules.trip.entity.Trip;
 import com.fleet.modules.trip.entity.TripComplianceStatus;
 import com.fleet.modules.trip.entity.TripDispatchStatus;
 import com.fleet.modules.trip.entity.TripOptimizationStatus;
 import com.fleet.modules.trip.entity.TripStatus;
+import com.fleet.modules.trip.entity.StopStatus;
 import com.fleet.modules.trip.repository.TripRepository;
 import com.fleet.modules.vehicle.entity.Vehicle;
 import com.fleet.modules.vehicle.entity.VehicleOperationalStatus;
 import com.fleet.modules.vehicle.repository.VehicleRepository;
+import java.time.LocalDateTime;
+
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -66,7 +72,51 @@ public class TripService {
         this.currentUserService = currentUserService;
     }
 
+    @Transactional
+    public TripDTO updateStopStatus(String tripId, int sequence, com.fleet.modules.trip.entity.StopStatus status) {
+
+        Trip trip = tripRepository.findById(tripId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Trip not found."));
+
+        enforceDriverOwnershipForAction(trip, "update stops");
+
+        List<TripStop> stops = trip.getStops();
+        boolean found = false;
+        for (TripStop stop : stops) {
+            if (stop.getSequence() == sequence) {
+                stop.setStatus(status);
+                if (status == StopStatus.COMPLETED) {
+                    stop.setDepartureTime(LocalDateTime.now());
+                } else if (status == StopStatus.IN_PROGRESS) {
+                    stop.setArrivalTime(LocalDateTime.now());
+                }
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Stop with sequence " + sequence + " not found.");
+        }
+
+        trip.setStops(stops);
+        Trip saved = tripRepository.save(trip);
+
+        auditLogService.record(
+            currentUserService.getCurrentActor(),
+            "UPDATE_STOP_STATUS",
+            "TRIP",
+            tripId,
+            "Stop " + sequence + " updated to " + status,
+            details("sequence", sequence, "status", status)
+        );
+
+
+        return toDto(saved);
+    }
+
     public List<TripDTO> getTrips() {
+
         AppRole role = currentUserService.getCurrentRole();
         String actorId = currentUserService.getRequiredUser().getId();
         return tripRepository.findAll().stream()
@@ -95,7 +145,8 @@ public class TripService {
         trip.setAssignedDriverId(normalize(request.assignedDriverId()));
         trip.setSource(normalize(request.source()));
         trip.setDestination(normalize(request.destination()));
-        trip.setStops(normalizeStops(request.stops()));
+        trip.setStops(normalizeStops(mapDtoStops(request.stops())));
+
         trip.setPlannedStartTime(request.plannedStartTime());
         trip.setPlannedEndTime(request.plannedEndTime());
         trip.setEstimatedDistance(request.estimatedDistance());
@@ -318,7 +369,8 @@ public class TripService {
             trip.getPriority(),
             trip.getSource(),
             trip.getDestination(),
-            trip.getStops(),
+            mapStops(trip.getStops()),
+
             trip.getPlannedStartTime(),
             trip.getPlannedEndTime(),
             trip.getActualStartTime(),
@@ -337,14 +389,26 @@ public class TripService {
         );
     }
 
-    private List<String> normalizeStops(List<String> stops) {
+        private List<TripStopDTO> mapStops(List<TripStop> stops) {
+        if (stops == null) return List.of();
+        return stops.stream().map(s -> new TripStopDTO(
+            s.getName(),
+            s.getSequence(),
+            s.getStatus(),
+            s.getArrivalTime(),
+            s.getDepartureTime()
+        )).toList();
+    }
+
+    private List<TripStop> normalizeStops(List<TripStop> stops) {
+
         if (stops == null) {
             return List.of();
         }
 
         return stops.stream()
-            .filter(stop -> stop != null && !stop.trim().isEmpty())
-            .map(String::trim)
+            .filter(stop -> stop != null && stop.getName() != null && !stop.getName().trim().isEmpty())
+            
             .toList();
     }
 
@@ -484,4 +548,14 @@ public class TripService {
             .map(value -> "\"" + (value == null ? "" : value.replace("\\", "\\\\").replace("\"", "\\\"")) + "\"")
             .collect(Collectors.joining(",", "[", "]"));
     }
+    private List<TripStop> mapDtoStops(List<TripStopDTO> stops) {
+        if (stops == null) return List.of();
+        return stops.stream().map(s -> new TripStop(
+            s.name(),
+            s.sequence(),
+            s.status() != null ? s.status() : com.fleet.modules.trip.entity.StopStatus.PENDING
+        )).toList();
+
+    }
 }
+

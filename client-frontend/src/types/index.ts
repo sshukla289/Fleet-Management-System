@@ -71,6 +71,18 @@ export interface CreateTelemetryInput {
   timestamp?: string
 }
 
+export type StopStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED'
+
+
+
+export interface TripStop {
+  name: string
+  sequence: number
+  status: StopStatus
+  arrivalTime?: string
+  departureTime?: string
+}
+
 export interface Trip {
   tripId: string
   routeId: string
@@ -80,7 +92,7 @@ export interface Trip {
   priority: TripPriority
   source: string
   destination: string
-  stops: string[]
+  stops: TripStop[]
   plannedStartTime?: string
   plannedEndTime?: string
   actualStartTime?: string | null
@@ -118,7 +130,7 @@ export interface TripValidationResult {
 export interface TripOptimizationResult {
   tripId: string
   optimizationStatus: TripOptimizationStatus
-  optimizedStops: string[]
+  optimizedStops: TripStop[]
   estimatedDistance: number
   estimatedDuration: string
   routeScore: number
@@ -131,7 +143,7 @@ export interface CreateTripInput {
   assignedDriverId: string
   source: string
   destination: string
-  stops: string[]
+  stops: TripStop[]
   plannedStartTime: string
   plannedEndTime: string
   estimatedDistance: number
@@ -139,6 +151,7 @@ export interface CreateTripInput {
   priority: TripPriority
   remarks?: string
 }
+
 
 export type UpdateTripInput = Partial<CreateTripInput>
 
@@ -440,7 +453,7 @@ export interface RoutePlan {
   status: 'Scheduled' | 'In Progress' | 'Completed'
   distanceKm: number
   estimatedDuration: string
-  stops: string[]
+  stops: TripStop[]
 }
 
 export interface CreateRoutePlanInput {
@@ -448,8 +461,9 @@ export interface CreateRoutePlanInput {
   status: RoutePlan['status']
   distanceKm: number
   estimatedDuration: string
-  stops: string[]
+  stops: TripStop[]
 }
+
 
 export type UpdateRoutePlanInput = CreateRoutePlanInput
 

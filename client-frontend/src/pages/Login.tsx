@@ -40,25 +40,24 @@ export function Login() {
           </div>
           <div className="input-group">
             <label htmlFor="email">Email</label>
-            <input 
-              id="email"
-              onChange={(event) => setEmail(event.target.value)} 
-              type="email" 
-              value={email} 
-              placeholder="admin@gmail.com"
-            />
-          </div>
-          <div className="input-group" style={{ position: 'relative' }}>
-            <label htmlFor="password">Password</label>
-            <div style={{ position: 'relative' }}>
-              <input
-                id="password"
-                onChange={(event) => setPassword(event.target.value)}
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                placeholder="••••••••"
-                style={{ width: '100%', paddingRight: '48px' }}
+              <input 
+                id="email"
+                onChange={(event) => setEmail(event.target.value)} 
+                type="email" 
+                value={email} 
               />
+            </div>
+            <div className="input-group" style={{ position: 'relative' }}>
+              <label htmlFor="password">Password</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  id="password"
+                  onChange={(event) => setPassword(event.target.value)}
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  style={{ width: '100%', paddingRight: '48px' }}
+                />
+
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}

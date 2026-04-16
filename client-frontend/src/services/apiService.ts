@@ -41,6 +41,8 @@ import type {
   Vehicle,
   VehicleAnalytics,
 } from '../types'
+import type { StopStatus } from '../types'
+
 
 const DEFAULT_API_BASE_URL = 'http://localhost:8080/api'
 
@@ -82,8 +84,6 @@ function readStoredToken() {
     return null
   }
 }
-
-
 
 async function parseError(response: Response) {
   const fallback = `Request failed with status ${response.status}`
@@ -129,9 +129,6 @@ async function request<T>(path: string, init?: RequestInit, options: RequestOpti
 
   if (!response.ok) {
     if (response.status === 401 && (options.auth ?? true)) {
-      // Dispatch a custom event instead of aggressively wiping storage.
-      // This allows the AuthProvider to handle the logout gracefully and prevents
-      // race conditions on refresh where one failed request wipes the active session.
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('fleet:auth:unauthorized'))
       }
@@ -214,6 +211,10 @@ export function completeTrip(tripId: string, input: CompleteTripInput): Promise<
     method: 'POST',
     body: JSON.stringify(input),
   })
+}
+
+export function updateStopStatus(tripId: string, sequence: number, status: StopStatus): Promise<Trip> {
+  return request<Trip>(`/trips/${tripId}/stops/${sequence}/status?status=${status}`, { method: 'POST' })
 }
 
 export function fetchTripTelemetry(tripId: string): Promise<TripTelemetryPoint[]> {

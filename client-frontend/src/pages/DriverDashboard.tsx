@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { MapView } from '../components/MapView'
+import { TripRoute } from '../components/TripRoute'
 import {
   fetchTrips,
   fetchTripTelemetry,
@@ -7,14 +8,19 @@ import {
   fetchAlerts,
   startTrip,
   completeTrip,
+  updateStopStatus,
 } from '../services/apiService'
 import type {
   Trip,
   TripTelemetryPoint,
   ComplianceCheckResult,
   Alert,
-  CompleteTripInput,
 } from '../types'
+import type { StopStatus } from '../types'
+
+
+import { useTripStore } from '../store/useTripStore'
+import { useTripWebSocket } from '../hooks/useTripWebSocket'
 
 interface ChecklistState {
   pickupCompleted: boolean
@@ -52,7 +58,13 @@ function formatDateTime(value?: string | null) {
 }
 
 export function DriverDashboard() {
-  const [activeTrip, setActiveTrip] = useState<Trip | null>(null)
+  const activeTrip = useTripStore((state) => state.activeTrip)
+  const setActiveTrip = useTripStore((state) => state.setActiveTrip)
+  const realTimeTelemetry = useTripStore((state) => state.telemetry)
+  
+  // Connect to WebSocket for the active trip
+  useTripWebSocket(activeTrip?.tripId)
+
   const [telemetry, setTelemetry] = useState<TripTelemetryPoint[]>([])
   const [compliance, setCompliance] = useState<ComplianceCheckResult | null>(null)
   const [systemAlerts, setSystemAlerts] = useState<Alert[]>([])
@@ -65,6 +77,7 @@ export function DriverDashboard() {
   const [loading, setLoading] = useState(true)
   const [working, setWorking] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+
 
   const refreshTripData = useCallback(async (tripId: string) => {
     try {
@@ -88,7 +101,6 @@ export function DriverDashboard() {
     setLoading(true)
     try {
       const allTrips = await fetchTrips()
-      // Prioritize In Progress, then Dispatched
       const current = allTrips.find(t => t.status === 'IN_PROGRESS') 
                    || allTrips.find(t => t.status === 'DISPATCHED')
                    || allTrips[0] 
@@ -120,7 +132,6 @@ export function DriverDashboard() {
     return () => clearTimeout(t)
   }, [message])
 
-  // Telemetry polling for active trips
   useEffect(() => {
     if (activeTrip && (activeTrip.status === 'IN_PROGRESS' || activeTrip.status === 'DISPATCHED')) {
       const interval = setInterval(() => {
@@ -144,17 +155,27 @@ export function DriverDashboard() {
     }
   }
 
+  const handleStopStatusUpdate = async (sequence: number, status: StopStatus) => {
+    if (!activeTrip) return
+    setWorking(true)
+    try {
+      await updateStopStatus(activeTrip.tripId, sequence, status)
+      await loadData()
+      setMessage(`Stop status updated to ${status.replace('_', ' ')}`)
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Failed to update stop status')
+    } finally {
+      setWorking(false)
+    }
+  }
+
   const handleComplete = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!activeTrip) return
     setWorking(true)
     try {
-      // Basic completion input
-      const input: CompleteTripInput = {
-        actualEndTime: new Date().toISOString(),
-        actualDistance: activeTrip.estimatedDistance,
-        actualDuration: activeTrip.estimatedDuration,
-        remarks: 'Completed via driver dashboard'
+      const input: any = { 
+        completionNotes: 'Completed by driver from dashboard' 
       }
       await completeTrip(activeTrip.tripId, input)
       await loadData()
@@ -202,7 +223,6 @@ export function DriverDashboard() {
     <div className="dd">
       {message && <div className="dd-toast">{message}</div>}
 
-      {/* Hero — Active Trip */}
       <section className="dd-hero">
         <div className="dd-hero__top">
           <div className="dd-hero__badges">
@@ -231,8 +251,20 @@ export function DriverDashboard() {
             
             <div className="dd-hero__metrics">
               <div className="dd-metric"><small>Vehicle</small><strong>{activeTrip.assignedVehicleId}</strong></div>
-              <div className="dd-metric"><small>Est. Duration</small><strong>{activeTrip.estimatedDuration}</strong></div>
+              <div className="dd-metric">
+                <small>Real-time Speed</small>
+                <strong style={{ color: 'var(--color-primary)' }}>
+                  {realTimeTelemetry ? `${Math.round(realTimeTelemetry.speed)} km/h` : '—'}
+                </strong>
+              </div>
+              <div className="dd-metric">
+                <small>Fuel Level</small>
+                <strong style={{ color: realTimeTelemetry && realTimeTelemetry.fuel < 20 ? 'var(--color-danger)' : 'inherit' }}>
+                  {realTimeTelemetry ? `${Math.round(realTimeTelemetry.fuel)}%` : '—'}
+                </strong>
+              </div>
             </div>
+
           </div>
         </div>
 
@@ -247,18 +279,29 @@ export function DriverDashboard() {
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
             Navigate
           </button>
+          
         </div>
+
+
       </section>
 
-      {/* Operational Grid */}
       <div className="dd-grid">
         <div className="dd-grid__main">
-          {/* Map */}
-          <div className="dd-map-wrap">
-            <MapView title={`${activeTrip.tripId} route`} stops={activeTrip.stops} />
+          <div className="dd-route-section" style={{ marginBottom: '24px' }}>
+            <div className="dd-block__title" style={{ marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Route Progress</span>
+              <small style={{ color: 'var(--color-muted)' }}>{activeTrip.tripId} • {activeTrip.stops.length} stops</small>
+            </div>
+            <TripRoute 
+              stops={activeTrip.stops} 
+              isLoading={loading} 
+              onUpdateStatus={handleStopStatusUpdate}
+            />
           </div>
 
-          {/* Telemetry (optional but good for driver) */}
+
+
+
           {telemetry.length > 0 && (
             <section className="dd-card">
               <div className="dd-card__head"><h4>Live Telemetry</h4></div>
@@ -276,7 +319,6 @@ export function DriverDashboard() {
         </div>
 
         <aside className="dd-grid__side">
-          {/* Checklist */}
           <div className="dd-block">
             <h4 className="dd-block__title">Task Checklist</h4>
             {(['pickupCompleted', 'documentsVerified', 'deliveryCompleted'] as const).map(key => (
@@ -294,7 +336,6 @@ export function DriverDashboard() {
             </div>
           </div>
 
-          {/* Timeline */}
           <div className="dd-block">
             <h4 className="dd-block__title">Trip Timeline</h4>
             <div className="dd-timeline">
@@ -310,7 +351,6 @@ export function DriverDashboard() {
             </div>
           </div>
 
-          {/* Alerts */}
           <div className="dd-block">
             <h4 className="dd-block__title">Safety & Compliance {alertCount > 0 && <span className="dd-block__badge">{alertCount}</span>}</h4>
             {compliance?.blockingReasons.map((r, i) => <div key={i} className="dd-notif dd-notif--block">🚨 {r}</div>)}
@@ -321,7 +361,6 @@ export function DriverDashboard() {
         </aside>
       </div>
 
-      {/* Quick Completion Form (Only if in progress) */}
       {activeTrip.status === 'IN_PROGRESS' && (
         <section className="dd-card dd-lower" style={{marginTop: '24px'}}>
           <div className="dd-card__head"><h4>Finish Trip</h4></div>

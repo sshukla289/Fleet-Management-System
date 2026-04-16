@@ -10,6 +10,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
 import java.util.ArrayList;
+import com.fleet.modules.trip.entity.TripStop;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -27,8 +29,7 @@ public class RoutePlan {
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "route_plan_stops", joinColumns = @JoinColumn(name = "route_plan_id"))
     @OrderColumn(name = "stop_order")
-    @Column(name = "stop_name")
-    private List<String> stops = new ArrayList<>();
+    private List<TripStop> stops = new ArrayList<>();
 
     public RoutePlan() {
     }
@@ -39,15 +40,16 @@ public class RoutePlan {
         String status,
         int distanceKm,
         String estimatedDuration,
-        List<String> stops
+        List<TripStop> stops
     ) {
         this.id = id;
         this.name = name;
         this.status = status;
         this.distanceKm = distanceKm;
         this.estimatedDuration = estimatedDuration;
-        this.stops = new ArrayList<>(stops);
+        this.stops = stops == null ? new ArrayList<>() : new ArrayList<>(stops);
     }
+
 
     public String getId() {
         return id;
@@ -89,11 +91,12 @@ public class RoutePlan {
         this.estimatedDuration = estimatedDuration;
     }
 
-    public List<String> getStops() {
+    public List<TripStop> getStops() {
         return new ArrayList<>(stops);
     }
 
-    public void setStops(List<String> stops) {
-        this.stops = new ArrayList<>(stops);
+    public void setStops(List<TripStop> stops) {
+        this.stops = stops == null ? new ArrayList<>() : new ArrayList<>(stops);
     }
+
 }

@@ -20,7 +20,10 @@ import com.fleet.modules.route.entity.RoutePlan;
 import com.fleet.modules.route.repository.RoutePlanRepository;
 import com.fleet.modules.telemetry.entity.Telemetry;
 import com.fleet.modules.telemetry.repository.TelemetryRepository;
+import com.fleet.modules.trip.entity.StopStatus;
 import com.fleet.modules.trip.entity.Trip;
+import com.fleet.modules.trip.entity.TripStop;
+
 import com.fleet.modules.trip.entity.TripComplianceStatus;
 import com.fleet.modules.trip.entity.TripDispatchStatus;
 import com.fleet.modules.trip.entity.TripOptimizationStatus;
@@ -166,9 +169,23 @@ public class DataSeeder {
 
             if (routePlanRepository.count() == 0) {
                 routePlanRepository.saveAll(List.of(
-                    new RoutePlan("RT-501", "Western Corridor Morning Run", "In Progress", 342, "6h 15m", List.of("Mumbai Hub", "Lonavala", "Pune Depot", "Satara Crossdock")),
-                    new RoutePlan("RT-502", "Central Maintenance Loop", "Scheduled", 184, "3h 40m", List.of("Nagpur Service Bay", "Wardha", "Amravati")),
-                    new RoutePlan("RT-503", "Southern Last-Mile Sweep", "Completed", 96, "2h 10m", List.of("Bengaluru Center", "Indiranagar", "Whitefield", "Yelahanka"))
+                    new RoutePlan("RT-501", "Western Corridor Morning Run", "In Progress", 342, "6h 15m", List.of(
+                        new TripStop("Mumbai Hub", 1, StopStatus.COMPLETED),
+                        new TripStop("Lonavala", 2, StopStatus.COMPLETED),
+                        new TripStop("Pune Depot", 3, StopStatus.IN_PROGRESS),
+                        new TripStop("Satara Crossdock", 4, StopStatus.PENDING)
+                    )),
+                    new RoutePlan("RT-502", "Central Maintenance Loop", "Scheduled", 184, "3h 40m", List.of(
+                        new TripStop("Nagpur Service Bay", 1, StopStatus.PENDING),
+                        new TripStop("Wardha", 2, StopStatus.PENDING),
+                        new TripStop("Amravati", 3, StopStatus.PENDING)
+                    )),
+                    new RoutePlan("RT-503", "Southern Last-Mile Sweep", "Completed", 96, "2h 10m", List.of(
+                        new TripStop("Bengaluru Center", 1, StopStatus.COMPLETED),
+                        new TripStop("Indiranagar", 2, StopStatus.COMPLETED),
+                        new TripStop("Whitefield", 3, StopStatus.COMPLETED),
+                        new TripStop("Yelahanka", 4, StopStatus.COMPLETED)
+                    ))
                 ));
             }
 
@@ -195,7 +212,12 @@ public class DataSeeder {
                         "6h 15m",
                         "2h 10m",
                         "Morning dispatch in motion.",
-                        List.of("Mumbai Hub", "Lonavala", "Pune Depot", "Satara Crossdock")
+                        List.of(
+                            new TripStop("Mumbai Hub", 1, StopStatus.COMPLETED),
+                            new TripStop("Lonavala", 2, StopStatus.COMPLETED),
+                            new TripStop("Pune Depot", 3, StopStatus.IN_PROGRESS),
+                            new TripStop("Satara Crossdock", 4, StopStatus.PENDING)
+                        )
                     ),
                     new Trip(
                         "TRIP-1002",
@@ -208,7 +230,7 @@ public class DataSeeder {
                         TripPriority.CRITICAL,
                         TripDispatchStatus.NOT_DISPATCHED,
                         TripComplianceStatus.BLOCKED,
-                        TripOptimizationStatus.NOT_STARTED,
+                        TripOptimizationStatus.OPTIMIZED,
                         LocalDateTime.now().minusHours(4),
                         LocalDateTime.now().minusHours(1),
                         null,
@@ -218,85 +240,21 @@ public class DataSeeder {
                         "3h 40m",
                         null,
                         "Blocked by maintenance and compliance checks.",
-                        List.of("Nagpur Service Bay", "Wardha", "Amravati")
+                        List.of(
+                            new TripStop("Nagpur Service Bay", 1, StopStatus.PENDING),
+                            new TripStop("Wardha", 2, StopStatus.PENDING),
+                            new TripStop("Amravati", 3, StopStatus.PENDING)
+                        )
                     )
                 ));
             }
 
-            upsertUser(
-                appUserRepository,
-                passwordEncoder,
-                "USR-1",
-                "Operations Manager Console",
-                AppRole.OPERATIONS_MANAGER,
-                "operations_manager@gmail.com",
-                "West and South India",
-                "operations_manager@gmail.com",
-                "password"
-            );
-            upsertUser(
-                appUserRepository,
-                passwordEncoder,
-                "USR-2",
-                "Super Admin Console",
-                AppRole.ADMIN,
-                "admin@gmail.com",
-                "Global",
-                "admin@gmail.com",
-                "password"
-            );
-            upsertUser(
-                appUserRepository,
-                passwordEncoder,
-                "USR-3",
-                "Dispatcher Console",
-                AppRole.DISPATCHER,
-                "dispatcher@gmail.com",
-                "West Corridor",
-                "dispatcher@gmail.com",
-                "password"
-            );
-            upsertUser(
-                appUserRepository,
-                passwordEncoder,
-                "USR-5",
-                "Route Planner Console",
-                AppRole.PLANNER,
-                "planner@gmail.com",
-                "Regional Hubs",
-                "planner@gmail.com",
-                "password"
-            );
-            upsertUser(
-                appUserRepository,
-                passwordEncoder,
-                "USR-4",
-                "Maintenance Manager Console",
-                AppRole.MAINTENANCE_MANAGER,
-                "maintenance_manager@gmail.com",
-                "Workshop Bay",
-                "maintenance_manager@gmail.com",
-                "password"
-            );
-            upsertUser(
-                appUserRepository,
-                passwordEncoder,
-                "DR-201",
-                "Driver Execution Console",
-                AppRole.DRIVER,
-                "driver@gmail.com",
-                "Field Operations",
-                "driver@gmail.com",
-                "password"
-            );
-
-            appUserRepository.findAll().forEach(user -> {
-                user.setRole(AppRole.fromStoredValue(user.getRole()).name());
-                if (user.getPassword() != null && !user.getPassword().startsWith("$2")) {
-                    user.setPassword(passwordEncoder.encode(user.getPassword()));
-                }
-                appUserRepository.save(user);
-            });
+            upsertUser(appUserRepository, passwordEncoder, "USR-1", "Operations Manager Console", AppRole.OPERATIONS_MANAGER, "operations_manager@gmail.com", "West and South India", "operations_manager@gmail.com", "password");
+            upsertUser(appUserRepository, passwordEncoder, "USR-2", "Super Admin Console", AppRole.ADMIN, "admin@gmail.com", "Global", "admin@gmail.com", "password");
+            upsertUser(appUserRepository, passwordEncoder, "USR-3", "Dispatcher Console", AppRole.DISPATCHER, "dispatcher@gmail.com", "West Corridor", "dispatcher@gmail.com", "password");
+            upsertUser(appUserRepository, passwordEncoder, "USR-5", "Route Planner Console", AppRole.PLANNER, "planner@gmail.com", "Regional Hubs", "planner@gmail.com", "password");
+            upsertUser(appUserRepository, passwordEncoder, "USR-4", "Maintenance Manager Console", AppRole.MAINTENANCE_MANAGER, "maintenance_manager@gmail.com", "Workshop Bay", "maintenance_manager@gmail.com", "password");
+            upsertUser(appUserRepository, passwordEncoder, "DR-201", "Driver Execution Console", AppRole.DRIVER, "driver@gmail.com", "Field Operations", "driver@gmail.com", "password");
 
             if (telemetryRepository.count() == 0) {
                 telemetryRepository.saveAll(List.of(
@@ -310,15 +268,7 @@ public class DataSeeder {
         };
     }
 
-    private Telemetry createTelemetry(
-        String vehicleId,
-        String tripId,
-        double latitude,
-        double longitude,
-        double speed,
-        double fuelLevel,
-        int minutesAgo
-    ) {
+    private Telemetry createTelemetry(String vehicleId, String tripId, double latitude, double longitude, double speed, double fuelLevel, int minutesAgo) {
         Telemetry telemetry = new Telemetry();
         telemetry.setVehicleId(vehicleId);
         telemetry.setTripId(tripId);
@@ -330,17 +280,7 @@ public class DataSeeder {
         return telemetry;
     }
 
-    private void upsertUser(
-        AppUserRepository appUserRepository,
-        PasswordEncoder passwordEncoder,
-        String id,
-        String name,
-        AppRole role,
-        String email,
-        String assignedRegion,
-        String loginEmail,
-        String rawPassword
-    ) {
+    private void upsertUser(AppUserRepository appUserRepository, PasswordEncoder passwordEncoder, String id, String name, AppRole role, String email, String assignedRegion, String loginEmail, String rawPassword) {
         AppUser user = appUserRepository.findById(id).orElse(null);
         if (user == null) {
             user = appUserRepository.findByLoginEmailIgnoreCase(loginEmail).orElse(null);
@@ -349,16 +289,12 @@ public class DataSeeder {
             user = new AppUser();
             user.setId(id);
         }
-
         user.setLoginEmail(loginEmail);
         user.setName(name);
         user.setRole(role.name());
         user.setEmail(email);
         user.setAssignedRegion(assignedRegion);
-        
-        // Always reset password during dev seeding when requested to ensure clean state
         user.setPassword(passwordEncoder.encode(rawPassword));
-        
         appUserRepository.save(user);
     }
 }

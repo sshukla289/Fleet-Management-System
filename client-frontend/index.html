@@ -5,8 +5,17 @@
     <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Express Logistics</title>
+    <script>
+      /**
+       * Polyfill for SockJS 'global is not defined' error in Vite/Modern browsers.
+       */
+      if (typeof global === 'undefined') {
+        window.global = window;
+      }
+    </script>
   </head>
   <body>
+
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

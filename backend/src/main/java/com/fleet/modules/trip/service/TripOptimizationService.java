@@ -5,7 +5,9 @@ import com.fleet.modules.route.repository.RoutePlanRepository;
 import com.fleet.modules.trip.dto.TripOptimizationResultDTO;
 import com.fleet.modules.trip.entity.Trip;
 import com.fleet.modules.trip.entity.TripOptimizationStatus;
+import com.fleet.modules.trip.entity.TripStop;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -25,7 +27,7 @@ public class TripOptimizationService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Trip is required.");
         }
 
-        List<String> candidateStops = resolveStops(trip);
+        List<TripStop> candidateStops = resolveStops(trip);
         if (candidateStops.isEmpty()) {
             trip.setOptimizationStatus(TripOptimizationStatus.FAILED);
             return new TripOptimizationResultDTO(
@@ -39,10 +41,15 @@ public class TripOptimizationService {
             );
         }
 
-        List<String> optimizedStops = optimizeStops(candidateStops);
+        List<TripStop> optimizedStops = optimizeStops(candidateStops);
         int estimatedDistance = optimizeDistance(trip.getEstimatedDistance(), optimizedStops.size(), trip.getRouteId());
         String estimatedDuration = optimizeDuration(trip.getEstimatedDuration(), trip.getEstimatedDistance(), estimatedDistance);
         int routeScore = calculateRouteScore(optimizedStops, estimatedDistance);
+
+        // Update stop sequences after optimization
+        for (int i = 0; i < optimizedStops.size(); i++) {
+            optimizedStops.get(i).setSequence(i + 1);
+        }
 
         trip.setStops(optimizedStops);
         trip.setEstimatedDistance(estimatedDistance);
@@ -52,7 +59,7 @@ public class TripOptimizationService {
         return new TripOptimizationResultDTO(
             trip.getId(),
             TripOptimizationStatus.OPTIMIZED,
-            optimizedStops,
+            mapToNames(optimizedStops),
             estimatedDistance,
             estimatedDuration,
             routeScore,
@@ -60,7 +67,11 @@ public class TripOptimizationService {
         );
     }
 
-    private List<String> resolveStops(Trip trip) {
+    private List<String> mapToNames(List<TripStop> stops) {
+        return stops.stream().map(TripStop::getName).toList();
+    }
+
+    private List<TripStop> resolveStops(Trip trip) {
         if (trip.getRouteId() != null && !trip.getRouteId().trim().isEmpty()) {
             return routePlanRepository.findById(trip.getRouteId())
                 .map(RoutePlan::getStops)
@@ -71,17 +82,17 @@ public class TripOptimizationService {
         return trip.getStops();
     }
 
-    private List<String> optimizeStops(List<String> stops) {
+    private List<TripStop> optimizeStops(List<TripStop> stops) {
         if (stops.size() <= 2) {
             return new ArrayList<>(stops);
         }
 
-        String start = stops.get(0);
-        String end = stops.get(stops.size() - 1);
-        List<String> middleStops = new ArrayList<>(stops.subList(1, stops.size() - 1));
-        middleStops.sort(String::compareToIgnoreCase);
+        TripStop start = stops.get(0);
+        TripStop end = stops.get(stops.size() - 1);
+        List<TripStop> middleStops = new ArrayList<>(stops.subList(1, stops.size() - 1));
+        middleStops.sort(Comparator.comparing(TripStop::getName, String.CASE_INSENSITIVE_ORDER));
 
-        List<String> optimizedStops = new ArrayList<>();
+        List<TripStop> optimizedStops = new ArrayList<>();
         optimizedStops.add(start);
         optimizedStops.addAll(middleStops);
         optimizedStops.add(end);
@@ -113,7 +124,8 @@ public class TripOptimizationService {
         return formatDurationMinutes(Math.max(15, optimizedMinutes));
     }
 
-    private int calculateRouteScore(List<String> optimizedStops, int estimatedDistance) {
+    private int calculateRouteScore(List<TripStop> optimizedStops, int estimatedDistance) {
+
         int score = 100;
         score -= Math.min(estimatedDistance / 10, 35);
         score -= Math.max(optimizedStops.size() - 3, 0) * 4;

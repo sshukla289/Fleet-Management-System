@@ -97,6 +97,8 @@ export function Navbar() {
 
   const title = useMemo(() => resolveTitle(pathname), [pathname])
   const [unreadCount, setUnreadCount] = useState(0)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+
 
   useEffect(() => {
     async function loadCount() {
@@ -135,9 +137,19 @@ export function Navbar() {
         </button>
         <button 
           className="navbar__logout-button" 
+          disabled={isLoggingOut}
           onClick={async () => {
-            await logout()
-            navigate('/login')
+            setIsLoggingOut(true)
+            try {
+              // Set a timeout to force logout if the API hangs
+              const logoutPromise = logout()
+              const timeoutPromise = new Promise(resolve => setTimeout(resolve, 3000))
+              await Promise.race([logoutPromise, timeoutPromise])
+            } catch (error) {
+              console.error('Logout failed but proceeding to clear session', error)
+            } finally {
+              navigate('/login', { replace: true })
+            }
           }}
         >
           <svg
@@ -155,8 +167,9 @@ export function Navbar() {
             <polyline points="16 17 21 12 16 7"></polyline>
             <line x1="21" x2="9" y1="12" y2="12"></line>
           </svg>
-          <span>Logout</span>
+          <span>{isLoggingOut ? 'Logging out...' : 'Logout'}</span>
         </button>
+
       </div>
     </header>
   )

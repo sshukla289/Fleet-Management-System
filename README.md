@@ -56,7 +56,18 @@ In practical terms, the system helps an operations team:
 - Profile
 - Admin user management
 
+## Recent System Upgrades (Latest)
+
+The following core features and architectural improvements were recently implemented:
+
+- **Real-Time WebSocket Architecture**: Enabled STOMP-based WebSockets across the platform for live telemetry updates (speed, fuel, and location) without manual page refreshes.
+- **Reactive State Management**: Integrated `Zustand` as the primary real-time store, allowing immediate UI feedback for vehicle movement and sensor data.
+- **Modernized Authentication**: Redesigned the Login interface with a high-fidelity logistics aesthetic, cross-browser security enhancements (preventing duplicate reveal icons), and streamlined access for all six operational roles.
+- **Enhanced Telemetry Integration**: Dashboards now feature live vehicle markers and reactive metrics strips that sync directly with the established STOMP stream.
+- **Resilient Execution Flow**: Upgraded the `DriverDashboard` and `Trips` management board with robust refresh logic and background polling fallbacks for high-availability tracking.
+
 ## Architecture overview
+
 
 The system has three main runtime parts:
 

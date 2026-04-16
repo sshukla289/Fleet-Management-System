@@ -60,10 +60,9 @@ public class Trip {
     private String remarks;
 
     @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "trip_stops", joinColumns = @JoinColumn(name = "trip_id"))
+    @CollectionTable(name = "trip_journey_stops", joinColumns = @JoinColumn(name = "trip_id"))
     @OrderColumn(name = "stop_order")
-    @Column(name = "stop_name")
-    private List<String> stops = new ArrayList<>();
+    private List<TripStop> stops = new ArrayList<>();
 
     public Trip() {
     }
@@ -89,7 +88,7 @@ public class Trip {
         String estimatedDuration,
         String actualDuration,
         String remarks,
-        List<String> stops
+        List<TripStop> stops
     ) {
         this.id = id;
         this.routeId = routeId;
@@ -298,11 +297,11 @@ public class Trip {
         this.remarks = remarks;
     }
 
-    public List<String> getStops() {
+    public List<TripStop> getStops() {
         return new ArrayList<>(stops);
     }
 
-    public void setStops(List<String> stops) {
+    public void setStops(List<TripStop> stops) {
         this.stops = stops == null ? new ArrayList<>() : new ArrayList<>(stops);
     }
 }

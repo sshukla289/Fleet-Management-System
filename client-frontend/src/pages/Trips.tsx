@@ -16,7 +16,10 @@ import {
   startTrip,
   validateTrip,
 } from '../services/apiService'
+import { useTripStore } from '../store/useTripStore'
+import { useTripWebSocket } from '../hooks/useTripWebSocket'
 import type {
+
   Alert,
   CompleteTripInput,
   ComplianceCheckResult,
@@ -141,18 +144,35 @@ export function Trips() {
   async function loadBoard() {
     setLoading(true)
     setMessage(null)
+    const role = session?.profile.role
     try {
-      const [tripData] = await Promise.all([
-        fetchTrips(), fetchVehicles(), fetchDrivers(), fetchRoutePlans(),
-      ])
+      // Drivers and other limited roles might not have access to all these resources.
+      // We only fetch what is permitted based on role.
+      const canViewAll = role === 'ADMIN' || role === 'OPERATIONS_MANAGER' || role === 'DISPATCHER' || role === 'PLANNER'
+      
+      const fetchList: Promise<any>[] = [fetchTrips()]
+      if (canViewAll) {
+        fetchList.push(fetchVehicles(), fetchDrivers(), fetchRoutePlans())
+      }
+
+      const results = await Promise.all(fetchList)
+      const tripData = results[0]
+      
       setTrips(tripData)
+
       setSelectedTripId((current) => current ?? tripData[0]?.tripId ?? null)
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Unable to load trip board.')
+
+    } catch (error: any) {
+      console.error('Failed to load operational data:', error)
+      const errorMsg = error?.response?.status === 403 
+        ? 'Access restricted. Some data could not be loaded.'
+        : (error instanceof Error ? error.message : 'Unable to load trip board.')
+      setMessage(errorMsg)
     } finally {
       setLoading(false)
     }
   }
+
 
   async function loadTelemetry(tripId?: string | null) {
     if (!tripId) { setTelemetry([]); setComplianceCheck(null); setSystemAlerts([]); return }
@@ -204,11 +224,24 @@ export function Trips() {
     }
   }, [selectedTrip])
 
+  const activeTripStore = useTripStore((state) => state.activeTrip)
+  const realTimeTelemetry = useTripStore((state) => state.telemetry)
+  
+  // Use our real-time hook
+  useTripWebSocket(selectedTrip?.tripId)
+
   async function refreshBoard(nextSelectedTripId?: string | null) {
     const keepSelected = nextSelectedTripId ?? selectedTrip?.tripId ?? null
     await loadBoard()
     setSelectedTripId(keepSelected)
+    // Explicitly refresh telemetry/compliance when manually refreshing
+    if (keepSelected) {
+      await loadTelemetry(keepSelected)
+    }
+    setMessage('Trip board updated')
   }
+
+
 
 
   async function handleTripAction(action: () => Promise<unknown>, successMessage: string) {
@@ -304,9 +337,20 @@ export function Trips() {
               </div>
               <div className="dd-hero__metrics">
                 <div className="dd-metric"><small>Duration</small><strong>{selectedTrip.actualDuration ?? selectedTrip.estimatedDuration}</strong></div>
-                <div className="dd-metric"><small>Vehicle</small><strong>{selectedTrip.assignedVehicleId}</strong></div>
-                <div className="dd-metric"><small>Driver</small><strong>{selectedTrip.assignedDriverId}</strong></div>
+                <div className="dd-metric">
+                  <small>Real-time Speed</small>
+                  <strong style={{ color: 'var(--color-primary)' }}>
+                    {realTimeTelemetry ? `${Math.round(realTimeTelemetry.speed)} km/h` : '—'}
+                  </strong>
+                </div>
+                <div className="dd-metric">
+                  <small>Fuel Level</small>
+                  <strong style={{ color: realTimeTelemetry && realTimeTelemetry.fuel < 20 ? 'var(--color-danger)' : 'inherit' }}>
+                    {realTimeTelemetry ? `${Math.round(realTimeTelemetry.fuel)}%` : '—'}
+                  </strong>
+                </div>
               </div>
+
             </div>
           </div>
           <div className="dd-hero__actions">
@@ -323,7 +367,7 @@ export function Trips() {
                 Start Trip
               </button>
             )}
-            <button className="dd-btn dd-btn--ghost" type="button" onClick={() => window.open(`https://www.google.com/maps/dir/${encodeURIComponent(selectedTrip.source)}/${selectedTrip.stops.map(s => encodeURIComponent(s)).join('/')}/${encodeURIComponent(selectedTrip.destination)}`, '_blank')}>
+            <button className="dd-btn dd-btn--ghost" type="button" onClick={() => window.open(`https://www.google.com/maps/dir/${encodeURIComponent(selectedTrip.source)}/${selectedTrip.stops.map(s => encodeURIComponent(s.name)).join('/')}/${encodeURIComponent(selectedTrip.destination)}`, '_blank')}>
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
               Navigate
             </button>
@@ -338,8 +382,13 @@ export function Trips() {
           <div className="dd-grid__main">
             {/* Map */}
             <div className="dd-map-wrap">
-              <MapView title={`${selectedTrip.tripId} route`} stops={selectedTrip.stops} />
+              <MapView 
+                title={`${selectedTrip.tripId} route`} 
+                stops={selectedTrip.stops.map(s => s.name)} 
+                currentTelemetry={realTimeTelemetry}
+              />
             </div>
+
 
             {/* Route step tracker */}
             <section className="dd-card">
@@ -349,7 +398,7 @@ export function Trips() {
                   const isDone = selectedTrip.status === 'COMPLETED' || idx < activeStopIdx
                   const isCurrent = idx === activeStopIdx && selectedTrip.status !== 'COMPLETED'
                   return (
-                    <div key={`${stop}-${idx}`} className={`dd-step${isDone ? ' dd-step--done' : ''}${isCurrent ? ' dd-step--active' : ''}`}>
+                    <div key={`${stop.name}-${idx}`} className={`dd-step${isDone ? ' dd-step--done' : ''}${isCurrent ? ' dd-step--active' : ''}`}>
                       <div className="dd-step__marker">
                         <div className="dd-step__dot">
                           {isDone && <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>}
@@ -358,7 +407,8 @@ export function Trips() {
                         {idx < selectedTrip.stops.length - 1 && <div className="dd-step__line" />}
                       </div>
                       <div className="dd-step__info">
-                        <strong>{stop}</strong>
+                        <strong>{stop.name}</strong>
+
                         <small>{idx === 0 ? 'Origin' : idx === selectedTrip.stops.length - 1 ? 'Destination' : `Stop ${idx}`}</small>
                       </div>
                     </div>

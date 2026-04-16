@@ -17,7 +17,8 @@ public record TripDTO(
     TripPriority priority,
     String source,
     String destination,
-    List<String> stops,
+    List<TripStopDTO> stops,
+
     LocalDateTime plannedStartTime,
     LocalDateTime plannedEndTime,
     LocalDateTime actualStartTime,

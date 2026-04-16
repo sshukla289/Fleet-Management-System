@@ -33,3 +33,13 @@ Thumbs.db
 .gemini/
 .antigravity/
 brain/
+
+# Root dependencies and build
+node_modules/
+dist/
+build/
+temp/
+.cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

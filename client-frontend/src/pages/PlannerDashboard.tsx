@@ -13,7 +13,8 @@ import type {
   CreateTripInput, 
   Trip, 
   RoutePlan,
-  TripOptimizationResult
+  TripOptimizationResult,
+  TripStop
 } from '../types'
 
 export function PlannerDashboard() {
@@ -72,7 +73,13 @@ export function PlannerDashboard() {
 
   const handleAddStop = () => {
     if (!newStop.trim()) return
-    setTripForm(prev => ({ ...prev, stops: [...prev.stops, newStop.trim()] }))
+    const stop: TripStop = {
+      name: newStop.trim(),
+      sequence: tripForm.stops.length + 1,
+      status: 'PENDING' as any
+    }
+
+    setTripForm(prev => ({ ...prev, stops: [...prev.stops, stop] }))
     setNewStop('')
   }
 
@@ -168,7 +175,7 @@ export function PlannerDashboard() {
         {/* Left: Map */}
         <div className="dd-grid__main">
           <div className="dd-map-wrap">
-            <MapView title="Route Sequencing Preview" stops={[tripForm.source, ...tripForm.stops, tripForm.destination].filter(Boolean)} />
+            <MapView title="Route Sequencing Preview" stops={[tripForm.source, ...tripForm.stops.map(s => s.name), tripForm.destination].filter(Boolean)} />
           </div>
           
           <section className="dd-card" style={{ marginTop: '24px' }}>
@@ -214,7 +221,7 @@ export function PlannerDashboard() {
               <div className="dd-stops-scroll" style={{ maxHeight: '300px', overflowY: 'auto' }}>
                 {tripForm.stops.map((stop, idx) => (
                   <div key={idx} className="dd-stop-item" style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', background: '#f9fafb', borderRadius: '6px', marginBottom: '8px', border: '1px solid #f3f4f6' }}>
-                    <span><small style={{ color: '#9ca3af', marginRight: '8px' }}>{idx + 1}</small>{stop}</span>
+                    <span><small style={{ color: '#9ca3af', marginRight: '8px' }}>{idx + 1}</small>{stop.name}</span>
                     <button onClick={() => handleRemoveStop(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}>×</button>
                   </div>
                 ))}

@@ -20,7 +20,8 @@ public class ComplianceController {
     }
 
     @GetMapping("/checks/{tripId}")
-    @PreAuthorize("hasAnyRole('ADMIN','FLEET_MANAGER','DISPATCHER_PLANNER','MAINTENANCE_MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS_MANAGER','DISPATCHER_PLANNER','MAINTENANCE_MANAGER','DRIVER')")
+
     public ResponseEntity<ComplianceCheckResultDTO> getTripCompliance(@PathVariable String tripId) {
         return ResponseEntity.ok(complianceService.checkTrip(tripId));
     }

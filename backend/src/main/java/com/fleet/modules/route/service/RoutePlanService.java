@@ -5,7 +5,11 @@ import com.fleet.modules.route.dto.RoutePlanDTO;
 import com.fleet.modules.route.dto.UpdateRoutePlanRequest;
 import com.fleet.modules.route.entity.RoutePlan;
 import com.fleet.modules.route.repository.RoutePlanRepository;
+import com.fleet.modules.trip.dto.TripStopDTO;
+import com.fleet.modules.trip.entity.StopStatus;
+import com.fleet.modules.trip.entity.TripStop;
 import java.util.ArrayList;
+
 import java.util.Comparator;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -42,7 +46,8 @@ public class RoutePlanService {
             request.status().trim(),
             request.distanceKm(),
             request.estimatedDuration().trim(),
-            normalizeStops(request.stops())
+            normalizeStops(mapDtoStops(request.stops()))
+
         );
 
         return toDto(routePlanRepository.save(routePlan));
@@ -81,7 +86,7 @@ public class RoutePlanService {
         routePlan.setStatus(request.status().trim());
         routePlan.setDistanceKm(request.distanceKm());
         routePlan.setEstimatedDuration(request.estimatedDuration().trim());
-        routePlan.setStops(normalizeStops(request.stops()));
+        routePlan.setStops(normalizeStops(mapDtoStops(request.stops())));
         return toDto(routePlanRepository.save(routePlan));
     }
 
@@ -94,6 +99,7 @@ public class RoutePlanService {
     }
 
     private int statusPriority(String status) {
+        if (status == null) return 2;
         return switch (status) {
             case "In Progress" -> 0;
             case "Scheduled" -> 1;
@@ -102,7 +108,7 @@ public class RoutePlanService {
     }
 
     private RoutePlan applyOptimization(RoutePlan routePlan) {
-        List<String> optimizedStops = optimizeStops(routePlan.getStops());
+        List<TripStop> optimizedStops = optimizeStops(routePlan.getStops());
         int optimizedDistance = optimizeDistance(routePlan.getDistanceKm(), optimizedStops.size());
         String optimizedDuration = optimizeDuration(
             routePlan.getEstimatedDuration(),
@@ -117,20 +123,26 @@ public class RoutePlanService {
         return routePlan;
     }
 
-    private List<String> optimizeStops(List<String> stops) {
+    private List<TripStop> optimizeStops(List<TripStop> stops) {
         if (stops == null || stops.size() <= 2) {
             return stops == null ? List.of() : new ArrayList<>(stops);
         }
 
-        String start = stops.get(0);
-        String end = stops.get(stops.size() - 1);
-        List<String> middleStops = new ArrayList<>(stops.subList(1, stops.size() - 1));
-        middleStops.sort(String::compareToIgnoreCase);
+        TripStop start = stops.get(0);
+        TripStop end = stops.get(stops.size() - 1);
+        List<TripStop> middleStops = new ArrayList<>(stops.subList(1, stops.size() - 1));
+        middleStops.sort(Comparator.comparing(TripStop::getName, String.CASE_INSENSITIVE_ORDER));
 
-        List<String> optimizedStops = new ArrayList<>();
+        List<TripStop> optimizedStops = new ArrayList<>();
         optimizedStops.add(start);
         optimizedStops.addAll(middleStops);
         optimizedStops.add(end);
+        
+        // Re-index sequences
+        for (int i = 0; i < optimizedStops.size(); i++) {
+            optimizedStops.get(i).setSequence(i + 1);
+        }
+        
         return optimizedStops;
     }
 
@@ -219,9 +231,21 @@ public class RoutePlanService {
             routePlan.getStatus(),
             routePlan.getDistanceKm(),
             routePlan.getEstimatedDuration(),
-            routePlan.getStops()
+            mapStops(routePlan.getStops())
         );
     }
+
+    private List<TripStopDTO> mapStops(List<TripStop> stops) {
+        if (stops == null) return List.of();
+        return stops.stream().map(s -> new TripStopDTO(
+            s.getName(),
+            s.getSequence(),
+            s.getStatus(),
+            s.getArrivalTime(),
+            s.getDepartureTime()
+        )).toList();
+    }
+
 
     private String nextId() {
         int nextNumber = routePlanRepository.findAll().stream()
@@ -249,7 +273,7 @@ public class RoutePlanService {
         String status,
         int distanceKm,
         String estimatedDuration,
-        List<String> stops
+        List<TripStopDTO> stops
     ) {
         if (isBlank(name) || isBlank(status) || isBlank(estimatedDuration)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Route fields are required.");
@@ -263,22 +287,30 @@ public class RoutePlanService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Distance must be zero or greater.");
         }
 
-        List<String> normalizedStops = normalizeStops(stops);
-        if (normalizedStops.isEmpty()) {
+        if (stops == null || stops.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At least one stop is required.");
         }
     }
 
-    private List<String> normalizeStops(List<String> stops) {
+    private List<TripStop> mapDtoStops(List<TripStopDTO> stops) {
+        if (stops == null) return List.of();
+        return stops.stream().map(s -> new TripStop(
+            s.name(),
+            s.sequence(),
+            s.status() != null ? s.status() : StopStatus.PENDING
+        )).toList();
+    }
+
+    private List<TripStop> normalizeStops(List<TripStop> stops) {
         if (stops == null) {
             return List.of();
         }
 
         return stops.stream()
-            .filter(stop -> stop != null && !stop.trim().isEmpty())
-            .map(String::trim)
+            .filter(stop -> stop != null && stop.getName() != null && !stop.getName().trim().isEmpty())
             .toList();
     }
+
 
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();

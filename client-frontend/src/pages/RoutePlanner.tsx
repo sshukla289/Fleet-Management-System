@@ -171,13 +171,18 @@ export function RoutePlanner() {
       return
     }
 
-    const nextForm = {
+    const nextForm: CreateRoutePlanInput = {
       ...form,
       distanceKm: parsedDistance,
       stops: stopsInput
         .split(',')
-        .map((stop) => stop.trim())
-        .filter(Boolean),
+        .map((stop, index) => ({
+          name: stop.trim(),
+          sequence: index + 1,
+          status: 'PENDING' as any
+        }))
+
+        .filter((s) => s.name),
     }
 
     try {
@@ -230,7 +235,7 @@ export function RoutePlanner() {
       stops: route.stops,
     })
     setDistanceInput(formatDistanceInput(String(route.distanceKm)))
-    setStopsInput(route.stops.join(', '))
+    setStopsInput(route.stops.map(s => s.name).join(', '))
     setEditingRouteId(route.id)
     setShowForm(true)
     setSelectedRouteId(route.id)
@@ -333,7 +338,7 @@ export function RoutePlanner() {
         </form>
       ) : null}
 
-      {primaryRoute ? <MapView title={primaryRoute.name} stops={primaryRoute.stops} /> : null}
+      {primaryRoute ? <MapView title={primaryRoute.name} stops={primaryRoute.stops.map(s => s.name)} /> : null}
 
       {successMessage ? <div className="form-success">{successMessage}</div> : null}
       {error && !showForm ? <div className="form-error">{error}</div> : null}
@@ -357,9 +362,9 @@ export function RoutePlanner() {
               <span className="badge">{route.stops.length} stops</span>
             </div>
             <div className="map-view__stops">
-              {route.stops.map((stop) => (
-                <span key={`${route.id}-${stop}`} className="badge">
-                  {stop}
+              {route.stops.map((stop, idx) => (
+                <span key={`${route.id}-${idx}`} className="badge">
+                  {stop.name}
                 </span>
               ))}
             </div>

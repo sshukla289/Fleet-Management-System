@@ -1,5 +1,6 @@
 package com.fleet.modules.route.dto;
 
+import com.fleet.modules.trip.dto.TripStopDTO;
 import java.util.List;
 
 public record CreateRoutePlanRequest(
@@ -7,6 +8,7 @@ public record CreateRoutePlanRequest(
     String status,
     int distanceKm,
     String estimatedDuration,
-    List<String> stops
+    List<TripStopDTO> stops
 ) {
+
 }

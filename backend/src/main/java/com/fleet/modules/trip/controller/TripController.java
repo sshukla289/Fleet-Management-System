@@ -27,11 +27,21 @@ public class TripController {
 
     private final TripService tripService;
     private final TelemetryService telemetryService;
+    private final com.fleet.modules.trip.service.TripUpdateService tripUpdateService;
 
-    public TripController(TripService tripService, TelemetryService telemetryService) {
+    public TripController(TripService tripService, TelemetryService telemetryService, com.fleet.modules.trip.service.TripUpdateService tripUpdateService) {
         this.tripService = tripService;
         this.telemetryService = telemetryService;
+        this.tripUpdateService = tripUpdateService;
     }
+
+    @PostMapping("/location/update")
+    @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS_MANAGER','DISPATCHER','DRIVER')")
+    public ResponseEntity<Void> updateLocation(@RequestBody com.fleet.modules.trip.dto.TripUpdateDTO update) {
+        tripUpdateService.publishTripUpdate(update);
+        return ResponseEntity.ok().build();
+    }
+
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS_MANAGER','DISPATCHER','PLANNER','MAINTENANCE_MANAGER','DRIVER')")
@@ -52,7 +62,8 @@ public class TripController {
     }
 
     @PostMapping("/{tripId}/validate")
-    @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS_MANAGER','DISPATCHER','PLANNER')")
+    @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS_MANAGER','DISPATCHER','PLANNER','DRIVER')")
+
     public ResponseEntity<TripValidationResultDTO> validateTrip(@PathVariable String tripId) {
         return ResponseEntity.ok(tripService.validateTrip(tripId));
     }
@@ -83,6 +94,17 @@ public class TripController {
     ) {
         return ResponseEntity.ok(tripService.completeTrip(tripId, request));
     }
+
+    @PostMapping("/{tripId}/stops/{sequence}/status")
+    @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS_MANAGER','DISPATCHER','DRIVER')")
+    public ResponseEntity<TripDTO> updateStopStatus(
+        @PathVariable String tripId,
+        @PathVariable int sequence,
+        @RequestParam com.fleet.modules.trip.entity.StopStatus status
+    ) {
+        return ResponseEntity.ok(tripService.updateStopStatus(tripId, sequence, status));
+    }
+
 
     @PostMapping("/{tripId}/cancel")
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS_MANAGER','DISPATCHER','PLANNER')")

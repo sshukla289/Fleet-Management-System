@@ -14,7 +14,8 @@ public record CreateTripRequest(
     @NotBlank String assignedDriverId,
     @NotBlank String source,
     @NotBlank String destination,
-    @NotNull @Size(min = 1) List<@NotBlank String> stops,
+    @NotNull @Size(min = 1) List<TripStopDTO> stops,
+
     @NotNull LocalDateTime plannedStartTime,
     @NotNull LocalDateTime plannedEndTime,
     @PositiveOrZero int estimatedDistance,

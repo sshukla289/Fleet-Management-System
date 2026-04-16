@@ -31,6 +31,14 @@ body,
   box-sizing: border-box;
 }
 
+/* Hide browser default password reveal/clear buttons */
+input::-ms-reveal,
+input::-ms-clear,
+input::-webkit-contacts-auto-fill-button,
+input::-webkit-credentials-auto-fill-button {
+  display: none !important;
+}
+
 body {
   margin: 0;
   min-width: 320px;
@@ -3207,6 +3215,84 @@ body {
 .dd-pill--red    { background: rgba(239, 68, 68, 0.1);   color: #b91c1c; }
 .dd-pill--amber  { background: rgba(245, 158, 11, 0.1);  color: #92400e; }
 
+/* ── Table / List ── */
+.dd-tbl {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: rgba(11, 15, 25, 0.04);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.dd-tbl__head {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1.2fr 1.5fr 1fr;
+  padding: 10px 16px;
+  background: #f8fafc;
+  border-bottom: 1px solid rgba(11, 15, 25, 0.06);
+}
+
+.dd-tbl__head span {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.dd-tbl__row {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1.2fr 1.5fr 1fr;
+  padding: 14px 16px;
+  background: #fff;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+  align-items: center;
+}
+
+.dd-tbl__row:hover {
+  background: #f1f5f9;
+}
+
+.dd-tbl__row--sel {
+  background: #f0f4ff;
+  position: relative;
+}
+
+.dd-tbl__row--sel::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--color-primary);
+}
+
+.dd-tbl__row span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dd-tbl__row strong {
+  font-size: 0.84rem;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dd-tbl__row small {
+  font-size: 0.72rem;
+  color: var(--color-muted);
+}
+
+
 /* ── Topbar with stats ── */
 .dd-topbar {
   display: flex;
@@ -4069,8 +4155,9 @@ body {
   }
 }
 
+<<<<<<< HEAD
 /* -------------------------------------------------------------------
-   ANALYTICS FILTER � Alignment Refinement
+   ANALYTICS FILTER � Alignment Refinement
    ------------------------------------------------------------------- */
 .analytics-filter {
   display: flex;
@@ -4236,3 +4323,237 @@ body {
   z-index: 10;
 }
 
+=======
+/* ── Trip Route Component ── */
+/* ── Trip Route Component Refinements ── */
+.dd-trip-route {
+  padding: 24px;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.03);
+}
+
+.dd-route-stop {
+  position: relative;
+  display: flex;
+  padding-bottom: 36px;
+  transition: transform 0.2s ease;
+}
+
+.dd-route-stop:hover {
+  transform: translateX(4px);
+}
+
+.dd-stop-indicator {
+  box-shadow: 0 0 0 4px #fff;
+}
+
+.dd-stop--current .dd-stop-indicator {
+  border-color: #3b82f6;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Tooltip Styles */
+[data-tooltip] {
+  position: relative;
+  cursor: help;
+}
+
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  padding: 6px 10px;
+  background: #1e293b;
+  color: #fff;
+  font-size: 0.7rem;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  z-index: 50;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+[data-tooltip]:hover::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.dd-route-info-card {
+  background: #f8fafc;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px dashed #e2e8f0;
+  margin-top: 8px;
+}
+
+
+.dd-route-stop:last-child {
+  padding-bottom: 0;
+}
+
+.dd-stop-line {
+  position: absolute;
+  left: 11px;
+  top: 24px;
+  bottom: 0;
+  width: 2px;
+  background: #e2e8f0;
+  z-index: 1;
+}
+
+.dd-line--done {
+  background: #10b981;
+}
+
+.dd-stop-node {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+  z-index: 2;
+}
+
+.dd-stop-indicator {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+  transition: all 0.3s ease;
+}
+
+.dd-stop--done .dd-stop-indicator {
+  background: #10b981;
+  border-color: #10b981;
+}
+
+.dd-stop--current .dd-stop-indicator {
+  border-color: #3b82f6;
+  position: relative;
+}
+
+.dd-stop-pulse {
+  width: 10px;
+  height: 10px;
+  background: #3b82f6;
+  border-radius: 50%;
+  animation: dd-pulse 2s infinite;
+}
+
+@keyframes dd-pulse {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+
+.dd-stop-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dd-stop-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dd-stop-header strong {
+  font-size: 0.95rem;
+  color: #1e293b;
+}
+
+.dd-stop-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 100px;
+  text-transform: uppercase;
+}
+
+.dd-stop-tag.completed { background: #d1fae5; color: #065f46; }
+.dd-stop-tag.in_progress { background: #dbeafe; color: #1e40af; }
+.dd-stop-tag.pending { background: #f1f5f9; color: #475569; }
+
+.dd-stop-times {
+  display: flex;
+  gap: 12px;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.dd-stop-times span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dd-stop-action {
+  margin-top: 8px;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #3b82f6;
+  background: transparent;
+  border: 1px solid #3b82f6;
+  border-radius: 6px;
+  width: fit-content;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dd-stop-action:hover {
+  background: #eff6ff;
+}
+
+.dd-stop-action--primary {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.dd-stop-action--primary:hover {
+  background: #2563eb;
+}
+
+.dd-stop-action--success {
+  background: #10b981;
+  color: #fff;
+  border-color: #10b981;
+}
+
+.dd-stop-action--success:hover {
+  background: #059669;
+}
+
+
+.dd-route-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dd-skeleton-bar {
+  height: 48px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #f8fafc 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: dd-loading-anim 1.5s infinite;
+  border-radius: 8px;
+}
+
+@keyframes dd-loading-anim {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+>>>>>>> 252735a (feat: real-time telemetry, WebSocket integration, and UI stabilization [Final])
