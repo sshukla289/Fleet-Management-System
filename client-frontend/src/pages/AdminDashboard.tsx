@@ -109,6 +109,17 @@ function DriverGlyph() {
   )
 }
 
+function UsersGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="9" cy="8" r="3" />
+      <path d="M2 21v-1a7 7 0 0 1 14 0v1" />
+      <circle cx="17" cy="9" r="2.5" />
+      <path d="M14.5 21v-1a5.5 5.5 0 0 1 7 0v1" />
+    </svg>
+  )
+}
+
 function VehicleGlyph() {
   return (
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -953,6 +964,13 @@ export function AdminDashboard() {
                 icon={<TripGlyph />}
                 title="Create Trip"
                 onClick={() => navigate('/trips')}
+              />
+              <ActionCard
+                accent="#0ea5e9"
+                description="Manage accounts, roles, and status without leaving the admin workspace."
+                icon={<UsersGlyph />}
+                title="Manage Users"
+                onClick={() => navigate('/admin/users')}
               />
               <ActionCard
                 accent="#0f766e"

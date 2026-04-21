@@ -24,6 +24,7 @@ export type AlertCategory =
 export type AlertSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
 export type AlertLifecycleStatus = 'OPEN' | 'ACKNOWLEDGED' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED'
 export type MaintenanceScheduleStatus = 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
+export type AdminUserStatus = 'ACTIVE' | 'INACTIVE'
 export type IssueType = 'BREAKDOWN' | 'ACCIDENT' | 'DELAY' | 'OTHER'
 
 export interface Vehicle {
@@ -738,12 +739,41 @@ export interface AdminUser {
   name: string
   role: AppRole
   email: string
+  status: AdminUserStatus
   loginEmail: string
   assignedRegion: string
 }
 
 export interface UpdateUserRoleInput {
   role: AppRole
+}
+
+export interface CreateAdminUserInput {
+  name: string
+  email: string
+  role: AppRole
+}
+
+export interface UpdateAdminUserInput {
+  name: string
+  email: string
+  role: AppRole
+  active: boolean
+}
+
+export interface AdminUsersPage {
+  content: AdminUser[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+  hasNext: boolean
+  hasPrevious: boolean
+}
+
+export interface AdminUserMutationResult {
+  user: AdminUser
+  temporaryPassword: string
 }
 
 export interface LoginCredentials {

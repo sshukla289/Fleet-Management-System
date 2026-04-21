@@ -92,6 +92,33 @@ function createClusterIcon(cluster: L.MarkerCluster) {
   })
 }
 
+function PlusGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  )
+}
+
+function MinusGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  )
+}
+
+function TargetGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 2v3m0 14v3M2 12h3m14 0h3" />
+      <circle cx="12" cy="12" r="9" />
+    </svg>
+  )
+}
+
 export function LiveFleetMap({
   vehicles,
   selectedVehicleId,
@@ -218,9 +245,35 @@ export function LiveFleetMap({
     }
   }, [onSelectVehicle, positionedVehicles, selectedVehicleId])
 
+  const handleZoomIn = () => mapRef.current?.zoomIn()
+  const handleZoomOut = () => mapRef.current?.zoomOut()
+  const handleCenter = () => {
+    if (positionedVehicles.length > 0) {
+      const bounds = L.latLngBounds(positionedVehicles.map((v) => [v.latitude, v.longitude]))
+      mapRef.current?.fitBounds(bounds.pad(0.18), { animate: true })
+    } else {
+      mapRef.current?.setView(DEFAULT_CENTER, DEFAULT_ZOOM)
+    }
+  }
+
   return (
     <div className="admin-live-map">
       <div className="admin-live-map__canvas" ref={mapContainerRef} />
+
+      <div className="admin-live-map__controls">
+        <button className="admin-live-map__control" onClick={handleCenter} title="Center view" type="button">
+          <TargetGlyph />
+        </button>
+        <div className="admin-live-map__control-group">
+          <button className="admin-live-map__control" onClick={handleZoomIn} title="Zoom in" type="button">
+            <PlusGlyph />
+          </button>
+          <button className="admin-live-map__control" onClick={handleZoomOut} title="Zoom out" type="button">
+            <MinusGlyph />
+          </button>
+        </div>
+      </div>
+
       {isLoading ? (
         <div className="admin-live-map__loading">Synchronizing GPS positions...</div>
       ) : positionedVehicles.length === 0 ? (
@@ -232,3 +285,4 @@ export function LiveFleetMap({
     </div>
   )
 }
+

@@ -385,6 +385,61 @@
   inset: 0;
 }
 
+.admin-live-map__controls {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 1000;
+}
+
+.admin-live-map__control-group {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+  overflow: hidden;
+}
+
+.admin-live-map__control {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: #fff;
+  color: #475569;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.1s ease;
+}
+
+.admin-live-map__control:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.admin-live-map__control:active {
+  transform: scale(0.96);
+}
+
+.admin-live-map__control-group .admin-live-map__control:first-child {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.admin-live-map__control:not(.admin-live-map__control-group .admin-live-map__control) {
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+}
+
 .admin-live-map__loading,
 .admin-live-map__empty {
   position: absolute;

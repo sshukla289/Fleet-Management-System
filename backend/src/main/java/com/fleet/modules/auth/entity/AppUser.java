@@ -26,6 +26,9 @@ public class AppUser {
     @Column(nullable = false)
     private String password;
 
+    @Column(name = "active")
+    private Boolean active = Boolean.TRUE;
+
     public AppUser() {
     }
 
@@ -101,5 +104,17 @@ public class AppUser {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public Boolean getActive() {
+        return active;
+    }
+
+    public void setActive(Boolean active) {
+        this.active = active;
+    }
+
+    public boolean isActiveAccount() {
+        return !Boolean.FALSE.equals(active);
     }
 }

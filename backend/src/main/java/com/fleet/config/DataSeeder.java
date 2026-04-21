@@ -414,6 +414,7 @@ public class DataSeeder {
         user.setRole(role.name());
         user.setEmail(email);
         user.setAssignedRegion(assignedRegion);
+        user.setActive(Boolean.TRUE);
         user.setPassword(passwordEncoder.encode(rawPassword));
         appUserRepository.save(user);
     }

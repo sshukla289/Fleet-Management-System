@@ -1,6 +1,10 @@
 import { AUTH_STORAGE_KEY } from '../context/auth-context'
+import { readViteEnv } from '../lib/readViteEnv'
 import type {
   AdminUser,
+  AdminUserMutationResult,
+  AdminUsersPage,
+  CreateAdminUserInput,
   AssignShiftInput,
   AuditLogEntry,
   AuthSession,
@@ -42,6 +46,7 @@ import type {
   TripStatus,
   TripTelemetryPoint,
   TripValidationResult,
+  UpdateAdminUserInput,
   UpdateUserRoleInput,
   UpdateDriverInput,
   UpdateDriverProfileInput,
@@ -59,7 +64,7 @@ import type {
 import type { StopStatus } from '../types'
 
 
-const DEFAULT_API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api'
+const DEFAULT_API_BASE_URL = readViteEnv('VITE_API_BASE_URL') ?? 'http://localhost:8080/api'
 
 type AnalyticsFilters = {
   startDate?: string
@@ -70,6 +75,14 @@ type AnalyticsFilters = {
 type AuditFilters = {
   from?: string
   to?: string
+}
+
+type AdminUsersFilters = {
+  page?: number
+  size?: number
+  search?: string
+  role?: string
+  status?: string
 }
 
 type RequestOptions = {
@@ -226,6 +239,26 @@ function buildAuditQuery(filters: AuditFilters) {
   return query ? `?${query}` : ''
 }
 
+function buildAdminUsersQuery(filters: AdminUsersFilters = {}) {
+  const params = new URLSearchParams()
+
+  params.set('page', String(filters.page ?? 0))
+  params.set('size', String(filters.size ?? 25))
+
+  if (filters.search?.trim()) {
+    params.set('search', filters.search.trim())
+  }
+  if (filters.role?.trim() && filters.role.trim() !== 'ALL') {
+    params.set('role', filters.role.trim())
+  }
+  if (filters.status?.trim() && filters.status.trim() !== 'ALL') {
+    params.set('status', filters.status.trim())
+  }
+
+  const query = params.toString()
+  return query ? `?${query}` : ''
+}
+
 function buildDriverScopeQuery(driverId?: string) {
   if (!driverId || !driverId.trim()) {
     return ''
@@ -350,14 +383,40 @@ export function logoutRequest(): Promise<void> {
   return request<void>('/auth/logout', { method: 'POST' })
 }
 
-export function fetchAdminUsers(): Promise<AdminUser[]> {
-  return request<AdminUser[]>('/admin/users')
+export function fetchAdminUsers(filters: AdminUsersFilters = {}): Promise<AdminUsersPage> {
+  return request<AdminUsersPage>(`/admin/users${buildAdminUsersQuery(filters)}`)
+}
+
+export function createAdminUser(input: CreateAdminUserInput): Promise<AdminUserMutationResult> {
+  return request<AdminUserMutationResult>('/admin/users', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export function updateAdminUser(id: string, input: UpdateAdminUserInput): Promise<AdminUser> {
+  return request<AdminUser>(`/admin/users/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(input),
+  })
 }
 
 export function updateUserRole(id: string, input: UpdateUserRoleInput): Promise<AdminUser> {
-  return request<AdminUser>(`/admin/users/${id}/roles`, {
+  return request<AdminUser>(`/admin/users/${id}/role`, {
     method: 'PUT',
     body: JSON.stringify(input),
+  })
+}
+
+export function resetAdminUserPassword(id: string): Promise<AdminUserMutationResult> {
+  return request<AdminUserMutationResult>(`/admin/users/${id}/reset-password`, {
+    method: 'POST',
+  })
+}
+
+export function deleteAdminUser(id: string): Promise<void> {
+  return request<void>(`/admin/users/${id}`, {
+    method: 'DELETE',
   })
 }
 

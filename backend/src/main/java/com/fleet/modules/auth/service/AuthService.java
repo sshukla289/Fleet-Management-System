@@ -37,7 +37,13 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
-        if (request == null || request.email() == null || request.password() == null) {
+        if (
+            request == null ||
+            request.email() == null ||
+            request.email().trim().isEmpty() ||
+            request.password() == null ||
+            request.password().trim().isEmpty()
+        ) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email and password are required.");
         }
 
@@ -50,6 +56,10 @@ public class AuthService {
 
         if (!passwordMatches(request.password(), user)) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials.");
+        }
+
+        if (!user.isActiveAccount()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Account is inactive.");
         }
 
         authSessionService.revokeSessionsForUser(user.getId());
@@ -107,9 +117,9 @@ public class AuthService {
         return new ProfileDTO(
             user.getId(),
             resolveDisplayName(user),
-            user.getRole(),
+            AppRole.fromStoredValue(user.getRole()).name(),
             user.getEmail(),
-            user.getAssignedRegion()
+            user.getAssignedRegion() == null ? "" : user.getAssignedRegion()
         );
     }
 

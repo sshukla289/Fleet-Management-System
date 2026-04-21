@@ -140,7 +140,11 @@ export function AnalyticsReports() {
   }, [isDriverView])
 
   useEffect(() => {
-    void loadReports({ startDate: defaultStart, endDate: defaultEnd, statusFilter: 'ALL' })
+    const timeoutId = window.setTimeout(() => {
+      void loadReports({ startDate: defaultStart, endDate: defaultEnd, statusFilter: 'ALL' })
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
   }, [loadReports])
 
   const selectedRange = useMemo(

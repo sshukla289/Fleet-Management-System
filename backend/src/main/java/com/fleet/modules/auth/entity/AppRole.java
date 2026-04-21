@@ -1,6 +1,7 @@
 package com.fleet.modules.auth.entity;
 
 import java.util.Locale;
+import java.util.Optional;
 
 public enum AppRole {
     ADMIN("Admin"),
@@ -25,8 +26,12 @@ public enum AppRole {
     }
 
     public static AppRole fromStoredValue(String value) {
+        return tryParse(value).orElse(DRIVER);
+    }
+
+    public static Optional<AppRole> tryParse(String value) {
         if (value == null || value.trim().isEmpty()) {
-            return DRIVER;
+            return Optional.empty();
         }
 
         String normalized = value.trim()
@@ -36,13 +41,13 @@ public enum AppRole {
             .toUpperCase(Locale.ROOT);
 
         return switch (normalized) {
-            case "ADMIN", "ROLE_ADMIN" -> ADMIN;
-            case "DRIVER", "ROLE_DRIVER" -> DRIVER;
-            case "DISPATCHER", "ROLE_DISPATCHER" -> DISPATCHER;
-            case "PLANNER", "ROLE_PLANNER" -> PLANNER;
-            case "OPERATIONS_MANAGER", "ROLE_OPERATIONS_MANAGER", "FLEET_MANAGER" -> OPERATIONS_MANAGER;
-            case "MAINTENANCE_MANAGER", "ROLE_MAINTENANCE_MANAGER" -> MAINTENANCE_MANAGER;
-            default -> DRIVER;
+            case "ADMIN", "ROLE_ADMIN", "SYSTEM_ADMIN" -> Optional.of(ADMIN);
+            case "DRIVER", "ROLE_DRIVER" -> Optional.of(DRIVER);
+            case "DISPATCHER", "ROLE_DISPATCHER" -> Optional.of(DISPATCHER);
+            case "PLANNER", "ROLE_PLANNER" -> Optional.of(PLANNER);
+            case "OPERATIONS_MANAGER", "ROLE_OPERATIONS_MANAGER", "FLEET_MANAGER", "FLEET_OPERATIONS_MANAGER" -> Optional.of(OPERATIONS_MANAGER);
+            case "MAINTENANCE_MANAGER", "ROLE_MAINTENANCE_MANAGER" -> Optional.of(MAINTENANCE_MANAGER);
+            default -> Optional.empty();
         };
     }
 }

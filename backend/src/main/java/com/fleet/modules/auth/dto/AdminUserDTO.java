@@ -5,6 +5,7 @@ public record AdminUserDTO(
     String name,
     String role,
     String email,
+    String status,
     String loginEmail,
     String assignedRegion
 ) {

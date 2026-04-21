@@ -9,6 +9,7 @@ import type { AppRole } from './types'
 import './App.css'
 
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard').then((module) => ({ default: module.AdminDashboard })))
+const AdminUsersPage = lazy(() => import('./pages/AdminUsers').then((module) => ({ default: module.AdminUsersPage })))
 const AnalyticsReports = lazy(() => import('./pages/AnalyticsReports').then((module) => ({ default: module.AnalyticsReports })))
 const AuditLogs = lazy(() => import('./pages/AuditLogs').then((module) => ({ default: module.AuditLogs })))
 const AlertsCenter = lazy(() => import('./pages/AlertsCenter').then((module) => ({ default: module.AlertsCenter })))
@@ -135,6 +136,9 @@ function App() {
         {/* Role-based dashboard aliases */}
         <Route path="/admin/dashboard" element={<RoleRoute allowedRoles={['ADMIN']} />}>
           <Route index element={<RouteLoader><AdminDashboard /></RouteLoader>} />
+        </Route>
+        <Route path="/admin/users" element={<RoleRoute allowedRoles={['ADMIN']} />}>
+          <Route index element={<RouteLoader><AdminUsersPage /></RouteLoader>} />
         </Route>
         <Route path="/maintenance/dashboard" element={<RoleRoute allowedRoles={['MAINTENANCE_MANAGER']} />}>
           <Route index element={<RouteLoader><MaintenanceDashboard /></RouteLoader>} />

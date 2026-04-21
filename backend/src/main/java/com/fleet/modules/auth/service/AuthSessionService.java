@@ -52,7 +52,8 @@ public class AuthSessionService {
         LocalDateTime now = LocalDateTime.now();
         return authSessionRepository.findByTokenAndRevokedAtIsNull(token.trim())
             .filter(session -> session.getExpiresAt() != null && session.getExpiresAt().isAfter(now))
-            .flatMap(session -> appUserRepository.findById(session.getUserId()));
+            .flatMap(session -> appUserRepository.findById(session.getUserId()))
+            .filter(AppUser::isActiveAccount);
     }
 
     @Transactional
