@@ -1,5 +1,6 @@
 import {
   completeTrip as apiCompleteTrip,
+  fetchTripFuelLogs as apiFetchTripFuelLogs,
   createPod as apiCreatePod,
   fetchTripChecklists as apiFetchTripChecklists,
   fetchTripPod as apiFetchTripPod,
@@ -17,6 +18,7 @@ import type {
   ChecklistType,
   CompleteTripInput,
   CreatePodInput,
+  FuelLog,
   ProofOfDelivery,
   StopStatus,
   Trip,
@@ -221,6 +223,10 @@ export async function submitProofOfDelivery(input: CreatePodInput): Promise<Proo
 
 export async function fetchTripPod(tripId: string): Promise<ProofOfDelivery | undefined> {
   return apiFetchTripPod(tripId)
+}
+
+export async function fetchTripFuelLogs(tripId: string): Promise<FuelLog[]> {
+  return apiFetchTripFuelLogs(tripId)
 }
 
 export async function updateTripChecklist(

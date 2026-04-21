@@ -13,6 +13,7 @@ import type {
   ChecklistType,
   CompleteTripInput,
   ComplianceCheckResult,
+  CreateFuelLogInput,
   CreatePodInput,
   CreateDriverInput,
   CreateMaintenanceAlertInput,
@@ -31,6 +32,7 @@ import type {
   DriverTripHistory,
   DriverProfile,
   DriverAnalytics,
+  FuelLog,
   LoginCredentials,
   MaintenanceAlert,
   MaintenanceSchedule,
@@ -38,6 +40,8 @@ import type {
   ProofOfDelivery,
   RoutePlan,
   SosAlert,
+  SyncBatchResponse,
+  SyncOperationType,
   Trip,
   TripChecklist,
   TripOtpSummary,
@@ -337,6 +341,31 @@ export function createPod(input: CreatePodInput): Promise<ProofOfDelivery> {
   })
 }
 
+export function createFuelLog(input: CreateFuelLogInput): Promise<FuelLog> {
+  const formData = new FormData()
+  formData.set('tripId', input.tripId)
+  formData.set('amount', String(input.amount))
+  formData.set('cost', String(input.cost))
+  if (input.clientRequestId?.trim()) {
+    formData.set('clientRequestId', input.clientRequestId.trim())
+  }
+  if (input.loggedAt?.trim()) {
+    formData.set('loggedAt', input.loggedAt.trim())
+  }
+  if (input.receipt) {
+    formData.set('receipt', input.receipt)
+  }
+
+  return request<FuelLog>('/fuel-log', {
+    method: 'POST',
+    body: formData,
+  })
+}
+
+export function fetchTripFuelLogs(tripId: string): Promise<FuelLog[]> {
+  return request<FuelLog[]>(`/trips/${tripId}/fuel-log`)
+}
+
 export function fetchTripPod(tripId: string): Promise<ProofOfDelivery | undefined> {
   return request<ProofOfDelivery>(`/trips/${tripId}/pod`, undefined, { allow404: true })
 }
@@ -362,6 +391,52 @@ export function updateStopStatus(tripId: string, sequence: number, status: StopS
 
 export function fetchTripTelemetry(tripId: string): Promise<TripTelemetryPoint[]> {
   return request<TripTelemetryPoint[]>(`/trips/${tripId}/telemetry`)
+}
+
+export function publishTripLocationUpdate(input: {
+  tripId: string
+  latitude: number
+  longitude: number
+  speed: number
+  fuel: number
+  currentStop?: string | null
+  status?: StopStatus
+  timestamp?: string
+}): Promise<void> {
+  return request<void>('/trips/location/update', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export function submitTripTelemetry(input: {
+  vehicleId?: string
+  tripId?: string
+  latitude: number
+  longitude: number
+  speed: number
+  fuelLevel: number
+  timestamp?: string
+}): Promise<void> {
+  return request<void>('/telemetry', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export function syncOfflineBatch(input: {
+  operations: Array<{
+    clientRequestId: string
+    type: SyncOperationType
+    clientRecordedAt?: string
+    conflictPolicy?: string
+    payload: Record<string, unknown>
+  }>
+}): Promise<SyncBatchResponse> {
+  return request<SyncBatchResponse>('/sync', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
 }
 
 export function fetchVehicleTelemetry(vehicleId: string): Promise<TripTelemetryPoint[]> {

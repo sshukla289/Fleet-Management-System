@@ -7,8 +7,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fleet.config.SecurityConfig;
+import com.fleet.modules.driver.service.DriverPerformanceAnalyticsService;
 import com.fleet.modules.analytics.dto.DriverPerformanceDashboardDTO;
-import com.fleet.modules.analytics.service.OperationalAnalyticsService;
 import com.fleet.modules.auth.entity.AppUser;
 import com.fleet.modules.auth.security.AuthTokenFilter;
 import com.fleet.modules.auth.security.RestAccessDeniedHandler;
@@ -37,7 +37,7 @@ class DriverPerformanceControllerSecurityTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private OperationalAnalyticsService operationalAnalyticsService;
+    private DriverPerformanceAnalyticsService driverPerformanceAnalyticsService;
 
     @MockitoBean
     private AuthSessionService authSessionService;
@@ -45,7 +45,7 @@ class DriverPerformanceControllerSecurityTest {
     @Test
     void driverPerformanceAllowsDriverRole() throws Exception {
         when(authSessionService.resolveUser("driver-token")).thenReturn(Optional.of(user("DR-201", "DRIVER")));
-        when(operationalAnalyticsService.getDriverPerformance(null, null)).thenReturn(new DriverPerformanceDashboardDTO(
+        when(driverPerformanceAnalyticsService.getDriverPerformance(null, null)).thenReturn(new DriverPerformanceDashboardDTO(
             LocalDateTime.now(),
             null,
             null,
@@ -54,6 +54,20 @@ class DriverPerformanceControllerSecurityTest {
             0,
             100.0,
             0.0,
+            100.0,
+            "Excellent",
+            0L,
+            0L,
+            0L,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            List.of(),
+            List.of(),
+            List.of(),
+            List.of(),
             List.of()
         ));
 
@@ -63,7 +77,7 @@ class DriverPerformanceControllerSecurityTest {
             )
             .andExpect(status().isOk());
 
-        verify(operationalAnalyticsService).getDriverPerformance(null, null);
+        verify(driverPerformanceAnalyticsService).getDriverPerformance(null, null);
     }
 
     @Test
@@ -71,7 +85,7 @@ class DriverPerformanceControllerSecurityTest {
         mockMvc.perform(get("/api/driver/performance"))
             .andExpect(status().isUnauthorized());
 
-        verify(operationalAnalyticsService, never()).getDriverPerformance(null, null);
+        verify(driverPerformanceAnalyticsService, never()).getDriverPerformance(null, null);
     }
 
     private AppUser user(String id, String role) {

@@ -168,6 +168,37 @@ class ChecklistServiceTest {
         assertEquals("Only assigned drivers can update trip checklists.", thrown.getReason());
     }
 
+    @Test
+    void mergeChecklistFromSyncKeepsPreviouslyCompletedItemsMarkedComplete() {
+        Checklist checklist = new Checklist();
+        checklist.setId("TRIP-1001-PRE");
+        checklist.setTripId("TRIP-1001");
+        checklist.setType(ChecklistType.PRE);
+        checklist.setItems(List.of(
+            new ChecklistItem("FUEL_OK", "Fuel ok", true),
+            new ChecklistItem("TIRES_OK", "Tires ok", false),
+            new ChecklistItem("DOCUMENTS_PRESENT", "Documents present", false)
+        ));
+        checklist.setCompleted(false);
+
+        when(checklistRepository.findByTripIdAndType("TRIP-1001", ChecklistType.PRE)).thenReturn(Optional.of(checklist));
+
+        ChecklistDTO updated = checklistService.mergeChecklistFromSync(
+            "TRIP-1001",
+            ChecklistType.PRE,
+            new UpdateChecklistRequest(List.of(
+                new ChecklistItemInput("FUEL_OK", false),
+                new ChecklistItemInput("TIRES_OK", true),
+                new ChecklistItemInput("DOCUMENTS_PRESENT", false)
+            ))
+        );
+
+        assertTrue(updated.items().stream().anyMatch(item -> item.key().equals("FUEL_OK") && item.completed()));
+        assertTrue(updated.items().stream().anyMatch(item -> item.key().equals("TIRES_OK") && item.completed()));
+        assertFalse(updated.completed());
+        verify(auditLogService).record(eq("driver@fleet.test"), eq("TRIP_CHECKLIST_SYNCED"), eq("TRIP"), eq("TRIP-1001"), eq("Pre-trip checklist synced."), any());
+    }
+
     private Trip buildTrip() {
         Trip trip = new Trip();
         trip.setId("TRIP-1001");

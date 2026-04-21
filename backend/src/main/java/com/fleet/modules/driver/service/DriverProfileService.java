@@ -1,6 +1,7 @@
 package com.fleet.modules.driver.service;
 
 import com.fleet.modules.auth.entity.AppUser;
+import com.fleet.modules.auth.entity.AppRole;
 import com.fleet.modules.auth.repository.AppUserRepository;
 import com.fleet.modules.auth.service.CurrentUserService;
 import com.fleet.modules.audit.service.AuditLogService;
@@ -61,11 +62,18 @@ public class DriverProfileService {
             .ifPresent(existing -> {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Email address is already in use.");
             });
+        appUserRepository.findByLoginEmailIgnoreCase(normalizedEmail)
+            .filter(existing -> !existing.getId().equalsIgnoreCase(user.getId()))
+            .ifPresent(existing -> {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Email address is already in use.");
+            });
 
         String previousEmail = user.getEmail();
+        String previousLoginEmail = user.getLoginEmail();
         String previousPhone = driver.getPhone();
 
         user.setEmail(normalizedEmail);
+        user.setLoginEmail(normalizedEmail);
         driver.setPhone(normalizedPhone);
 
         AppUser savedUser = appUserRepository.save(user);
@@ -79,8 +87,10 @@ public class DriverProfileService {
             "Driver contact details updated.",
             details(
                 "previousEmail", previousEmail,
+                "previousLoginEmail", previousLoginEmail,
                 "previousPhone", previousPhone,
                 "email", savedUser.getEmail(),
+                "loginEmail", savedUser.getLoginEmail(),
                 "phone", savedDriver.getPhone()
             )
         );
@@ -102,7 +112,7 @@ public class DriverProfileService {
         return new DriverProfileDTO(
             user.getId(),
             driver.getName(),
-            user.getRole(),
+            AppRole.fromStoredValue(user.getRole()).name(),
             user.getEmail(),
             user.getAssignedRegion(),
             driver.getStatus(),

@@ -237,6 +237,49 @@ export interface CreatePodInput {
   photo: File
 }
 
+export interface FuelLog {
+  id: string
+  tripId: string
+  driverId: string
+  amount: number
+  cost: number
+  receiptUrl?: string | null
+  clientRequestId?: string | null
+  loggedAt: string
+  recordedAt: string
+}
+
+export interface CreateFuelLogInput {
+  tripId: string
+  amount: number
+  cost: number
+  receipt?: File | null
+  clientRequestId?: string
+  loggedAt?: string
+}
+
+export type SyncOperationType = 'FUEL_LOG' | 'TRIP_UPDATE' | 'CHECKLIST' | 'TELEMETRY'
+export type SyncOperationStatus = 'APPLIED' | 'DUPLICATE' | 'CONFLICT' | 'FAILED'
+
+export interface SyncOperationResult {
+  clientRequestId: string
+  type: SyncOperationType
+  status: SyncOperationStatus
+  resolution?: string | null
+  entityId?: string | null
+  message: string
+  processedAt: string
+}
+
+export interface SyncBatchResponse {
+  processedAt: string
+  appliedCount: number
+  duplicateCount: number
+  conflictCount: number
+  failedCount: number
+  results: SyncOperationResult[]
+}
+
 export interface ValidateTripOtpInput {
   otp: string
 }

@@ -2,8 +2,10 @@ import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { Client, type IMessage, type StompSubscription } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
 import { getWebSocketBrokerUrl, getWebSocketHttpUrl, readStoredAuthToken } from '../services/websocketService'
+import { bufferTrackingSnapshot, processOfflineQueue } from '../services/offlineSyncService'
 import { fetchLatestTripTelemetry } from '../services/tripExecutionService'
 import type { TrackingConnectionState, TripTrackingUpdate } from '../types/tripExecution'
+import type { StopStatus } from '../types'
 
 function parseTrackingUpdate(message: IMessage): TripTrackingUpdate | null {
   try {
@@ -58,13 +60,34 @@ function getGeolocationErrorMessage(error: GeolocationPositionError) {
   }
 }
 
-export function useDriverTracking(tripId: string | undefined, publishEnabled = true) {
+type UseDriverTrackingOptions = {
+  tripId: string | undefined
+  vehicleId?: string
+  publishEnabled?: boolean
+  currentStop?: string | null
+  currentStopStatus?: StopStatus | null
+  fallbackFuelLevel?: number | null
+}
+
+export function useDriverTracking({
+  tripId,
+  vehicleId,
+  publishEnabled = true,
+  currentStop,
+  currentStopStatus,
+  fallbackFuelLevel,
+}: UseDriverTrackingOptions) {
   const clientRef = useRef<Client | null>(null)
   const subscriptionRef = useRef<StompSubscription | null>(null)
   const watchIdRef = useRef<number | null>(null)
   const sendIntervalRef = useRef<number | null>(null)
   const lastPositionRef = useRef<GeolocationPosition | null>(null)
   const activeTripIdRef = useRef<string | undefined>(undefined)
+  const activeVehicleIdRef = useRef<string | undefined>(undefined)
+  const activeCurrentStopRef = useRef<string | null | undefined>(undefined)
+  const activeCurrentStopStatusRef = useRef<StopStatus | null | undefined>(undefined)
+  const fallbackFuelLevelRef = useRef<number | null | undefined>(undefined)
+  const latestUpdateRef = useRef<TripTrackingUpdate | null>(null)
   const [latestUpdate, setLatestUpdate] = useState<TripTrackingUpdate | null>(null)
   const [connectionState, setConnectionState] = useState<TrackingConnectionState>('idle')
   const [gpsWarning, setGpsWarning] = useState<string | null>(null)
@@ -78,6 +101,28 @@ export function useDriverTracking(tripId: string | undefined, publishEnabled = t
     }
 
     setLatestUpdate(update)
+    latestUpdateRef.current = update
+  })
+
+  const bufferLatestPosition = useEffectEvent((position: GeolocationPosition) => {
+    const currentTripId = activeTripIdRef.current
+    if (!publishEnabled || !currentTripId) {
+      return
+    }
+
+    void bufferTrackingSnapshot({
+      vehicleId: activeVehicleIdRef.current,
+      tripId: currentTripId,
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+      speed: getSpeedKph(position),
+      fuelLevel: fallbackFuelLevelRef.current ?? latestUpdateRef.current?.fuelLevel ?? 0,
+      currentStop: activeCurrentStopRef.current ?? latestUpdateRef.current?.currentStop ?? null,
+      status: activeCurrentStopStatusRef.current
+        ?? (latestUpdateRef.current?.currentStopStatus as StopStatus | null | undefined)
+        ?? null,
+      timestamp: new Date().toISOString(),
+    })
   })
 
   const publishLatestPosition = useEffectEvent(() => {
@@ -85,7 +130,12 @@ export function useDriverTracking(tripId: string | undefined, publishEnabled = t
     const position = lastPositionRef.current
     const currentTripId = activeTripIdRef.current
 
-    if (!publishEnabled || !client?.connected || !position || !currentTripId) {
+    if (!publishEnabled || !position || !currentTripId) {
+      return
+    }
+
+    if (!client?.connected || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+      bufferLatestPosition(position)
       return
     }
 
@@ -103,7 +153,11 @@ export function useDriverTracking(tripId: string | undefined, publishEnabled = t
 
   useEffect(() => {
     activeTripIdRef.current = tripId
-  }, [tripId])
+    activeVehicleIdRef.current = vehicleId
+    activeCurrentStopRef.current = currentStop
+    activeCurrentStopStatusRef.current = currentStopStatus
+    fallbackFuelLevelRef.current = fallbackFuelLevel
+  }, [currentStop, currentStopStatus, fallbackFuelLevel, tripId, vehicleId])
 
   useEffect(() => {
     if (!tripId) {
@@ -115,6 +169,7 @@ export function useDriverTracking(tripId: string | undefined, publishEnabled = t
       .then((update) => {
         if (!cancelled && update) {
           setLatestUpdate(update)
+          latestUpdateRef.current = update
         }
       })
       .catch(() => undefined)
@@ -205,6 +260,7 @@ export function useDriverTracking(tripId: string | undefined, publishEnabled = t
       })
 
       publishLatestPosition()
+      void processOfflineQueue()
     }
 
     client.onStompError = (frame) => {
@@ -231,6 +287,7 @@ export function useDriverTracking(tripId: string | undefined, publishEnabled = t
 
     const handleOnline = () => {
       setNetworkWarning(null)
+      void processOfflineQueue()
     }
 
     window.addEventListener('offline', handleOffline)

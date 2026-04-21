@@ -66,32 +66,7 @@ public class ChecklistService {
         Trip trip = findTripAndEnforceWriteAccess(tripId);
         assertChecklistCanBeUpdated(trip, type);
         Checklist checklist = getOrCreateChecklist(trip.getId(), type);
-
-        Map<String, ChecklistItem> existingByKey = checklist.getItems().stream()
-            .collect(Collectors.toMap(ChecklistItem::getKey, item -> item, (left, right) -> left, LinkedHashMap::new));
-
-        Map<String, Boolean> incomingByKey = new LinkedHashMap<>();
-        for (ChecklistItemInput item : request.items()) {
-            String key = normalize(item.key());
-            if (key == null || !existingByKey.containsKey(key)) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown checklist item: " + item.key());
-            }
-            incomingByKey.put(key, item.completed());
-        }
-
-        List<ChecklistItem> updatedItems = new ArrayList<>();
-        for (ChecklistItem existing : checklist.getItems()) {
-            ChecklistItem updated = new ChecklistItem(
-                existing.getKey(),
-                existing.getLabel(),
-                incomingByKey.getOrDefault(existing.getKey(), existing.isCompleted())
-            );
-            updatedItems.add(updated);
-        }
-
-        checklist.setItems(updatedItems);
-        checklist.setCompleted(updatedItems.stream().allMatch(ChecklistItem::isCompleted));
-        Checklist saved = checklistRepository.save(checklist);
+        Checklist saved = applyChecklistUpdate(checklist, request.items(), false);
 
         auditLogService.record(
             currentUserService.getCurrentActor(),
@@ -102,12 +77,70 @@ public class ChecklistService {
             Map.of(
                 "type", type.name(),
                 "completed", saved.isCompleted(),
-                "completedItems", updatedItems.stream().filter(ChecklistItem::isCompleted).count(),
-                "totalItems", updatedItems.size()
+                "completedItems", saved.getItems().stream().filter(ChecklistItem::isCompleted).count(),
+                "totalItems", saved.getItems().size()
             )
         );
 
         return toDto(saved);
+    }
+
+    @Transactional
+    public ChecklistDTO mergeChecklistFromSync(String tripId, ChecklistType type, UpdateChecklistRequest request) {
+        if (request == null || request.items() == null || request.items().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Checklist items are required.");
+        }
+
+        Trip trip = findTripAndEnforceWriteAccess(tripId);
+        assertChecklistCanBeUpdated(trip, type);
+        Checklist checklist = getOrCreateChecklist(trip.getId(), type);
+        Checklist saved = applyChecklistUpdate(checklist, request.items(), true);
+
+        auditLogService.record(
+            currentUserService.getCurrentActor(),
+            "TRIP_CHECKLIST_SYNCED",
+            "TRIP",
+            trip.getId(),
+            type == ChecklistType.PRE ? "Pre-trip checklist synced." : "Post-trip checklist synced.",
+            Map.of(
+                "type", type.name(),
+                "completed", saved.isCompleted(),
+                "completedItems", saved.getItems().stream().filter(ChecklistItem::isCompleted).count(),
+                "totalItems", saved.getItems().size(),
+                "resolution", "MERGE_COMPLETION"
+            )
+        );
+
+        return toDto(saved);
+    }
+
+    private Checklist applyChecklistUpdate(Checklist checklist, List<ChecklistItemInput> incomingItems, boolean mergeCompletion) {
+        Map<String, ChecklistItem> existingByKey = checklist.getItems().stream()
+            .collect(Collectors.toMap(ChecklistItem::getKey, item -> item, (left, right) -> left, LinkedHashMap::new));
+
+        Map<String, Boolean> incomingByKey = new LinkedHashMap<>();
+        for (ChecklistItemInput item : incomingItems) {
+            String key = normalize(item.key());
+            if (key == null || !existingByKey.containsKey(key)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown checklist item: " + item.key());
+            }
+            incomingByKey.put(key, item.completed());
+        }
+
+        List<ChecklistItem> updatedItems = new ArrayList<>();
+        for (ChecklistItem existing : checklist.getItems()) {
+            boolean requested = incomingByKey.getOrDefault(existing.getKey(), existing.isCompleted());
+            ChecklistItem updated = new ChecklistItem(
+                existing.getKey(),
+                existing.getLabel(),
+                mergeCompletion ? existing.isCompleted() || requested : requested
+            );
+            updatedItems.add(updated);
+        }
+
+        checklist.setItems(updatedItems);
+        checklist.setCompleted(updatedItems.stream().allMatch(ChecklistItem::isCompleted));
+        return checklistRepository.save(checklist);
     }
 
     @Transactional

@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ActionPanel } from './ActionPanel'
+import { FuelLogPanel } from './FuelLogPanel'
 import { MapView } from './MapView'
+import { OfflineSyncPanel } from './OfflineSyncPanel'
 import { OtpVerificationModal } from './OtpVerificationModal'
 import { ProofOfDeliveryPanel } from './ProofOfDeliveryPanel'
 import { StopTimeline } from './StopTimeline'
@@ -14,16 +16,24 @@ import {
   completeTrip,
   fetchActiveTrip,
   fetchTripChecklists,
+  fetchTripFuelLogs,
   fetchTripPod,
   pauseTrip,
   resendTripOtp,
   resumeTrip,
   startTrip,
   submitProofOfDelivery,
-  updateTripChecklist,
   updateStopStatus,
   validateTripOtp,
 } from '../../services/tripExecutionService'
+import {
+  OFFLINE_SYNC_EVENT,
+  getOfflineSyncSnapshot,
+  type OfflineSyncSnapshot,
+  processOfflineQueue,
+  submitFuelLogWithOffline,
+  updateTripChecklistWithOffline,
+} from '../../services/offlineSyncService'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import {
   setActionInProgress,
@@ -162,7 +172,13 @@ export function TripExecutionPage() {
   const [actionError, setActionError] = useState<string | null>(null)
   const [podError, setPodError] = useState<string | null>(null)
   const [otpError, setOtpError] = useState<string | null>(null)
+  const [fuelLogError, setFuelLogError] = useState<string | null>(null)
   const [otpModalOpen, setOtpModalOpen] = useState(false)
+  const [offlineSyncState, setOfflineSyncState] = useState<OfflineSyncSnapshot>({
+    queuedCount: 0,
+    processing: false,
+    receipts: [],
+  })
   const activeStop = useMemo(() => getCurrentStop(activeTrip), [activeTrip])
   const trackingTripId = activeTrip && activeTrip.status !== 'COMPLETED' ? activeTrip.id : undefined
   const activeTripId = activeTrip?.id ?? null
@@ -173,10 +189,13 @@ export function TripExecutionPage() {
     : selectedChecklistState.tripId === activeTripId
       ? selectedChecklistState.value
       : 'POST'
-  const { latestUpdate, connectionState, gpsWarning, networkWarning } = useDriverTracking(
-    trackingTripId,
-    activeTrip?.status === 'IN_PROGRESS',
-  )
+  const { latestUpdate, connectionState, gpsWarning, networkWarning } = useDriverTracking({
+    tripId: trackingTripId,
+    vehicleId: activeTrip?.vehicleNumber,
+    publishEnabled: activeTrip?.status === 'IN_PROGRESS',
+    currentStop: activeStop?.name ?? null,
+    currentStopStatus: activeStop?.status ?? null,
+  })
 
   const activeTripQuery = useQuery({
     queryKey: ['tripExecution', 'activeTrip'],
@@ -192,6 +211,12 @@ export function TripExecutionPage() {
   const podQuery = useQuery({
     queryKey: ['tripExecution', 'pod', activeTrip?.id],
     queryFn: () => fetchTripPod(activeTrip!.id),
+    enabled: Boolean(activeTrip?.id),
+  })
+
+  const fuelLogsQuery = useQuery({
+    queryKey: ['tripExecution', 'fuelLogs', activeTrip?.id],
+    queryFn: () => fetchTripFuelLogs(activeTrip!.id),
     enabled: Boolean(activeTrip?.id),
   })
 
@@ -260,6 +285,14 @@ export function TripExecutionPage() {
     void queryClient.invalidateQueries({ queryKey: ['tripExecution', 'pod', activeTripId] })
   }, [activeTripId, queryClient])
 
+  const invalidateFuelLogs = useCallback(() => {
+    if (!activeTripId) {
+      return
+    }
+
+    void queryClient.invalidateQueries({ queryKey: ['tripExecution', 'fuelLogs', activeTripId] })
+  }, [activeTripId, queryClient])
+
   const checklists = useMemo(() => checklistQuery.data ?? [], [checklistQuery.data])
 
   const invalidateChecklists = useCallback(() => {
@@ -269,6 +302,40 @@ export function TripExecutionPage() {
 
     void queryClient.invalidateQueries({ queryKey: ['tripExecution', 'checklists', activeTripId] })
   }, [activeTripId, queryClient])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const refreshOfflineSync = () => {
+      void getOfflineSyncSnapshot().then((snapshot) => {
+        if (!cancelled) {
+          setOfflineSyncState(snapshot)
+        }
+      })
+    }
+
+    const flushAndRefresh = () => {
+      void processOfflineQueue()
+        .catch(() => undefined)
+        .finally(() => {
+          refreshOfflineSync()
+          invalidateChecklists()
+          invalidateFuelLogs()
+        })
+    }
+
+    refreshOfflineSync()
+    const interval = window.setInterval(flushAndRefresh, 25_000)
+    window.addEventListener(OFFLINE_SYNC_EVENT, refreshOfflineSync)
+    window.addEventListener('online', flushAndRefresh)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+      window.removeEventListener(OFFLINE_SYNC_EVENT, refreshOfflineSync)
+      window.removeEventListener('online', flushAndRefresh)
+    }
+  }, [invalidateChecklists, invalidateFuelLogs])
 
   const updateMutationState = useCallback(
     (trip: ExecutionTrip | null, pendingAction: string | null) => {
@@ -467,14 +534,19 @@ export function TripExecutionPage() {
         throw new Error('No active trip available')
       }
 
-      return updateTripChecklist(activeTrip.id, type, {
+      return updateTripChecklistWithOffline(activeTrip.id, type, {
         items: items.map((item) => ({ key: item.key, completed: item.completed })),
       })
     },
     onMutate: () => {
       setChecklistSaveError(null)
     },
-    onSuccess: (updatedChecklist) => {
+    onSuccess: (result) => {
+      if (result.status !== 'sent') {
+        return
+      }
+
+      const updatedChecklist = result.response
       if (!activeTrip) {
         return
       }
@@ -491,7 +563,31 @@ export function TripExecutionPage() {
       setChecklistSaveError(error instanceof Error ? error.message : 'Checklist save failed')
       invalidateChecklists()
     },
-    onSettled: invalidateChecklists,
+  })
+
+  const fuelLogMutation = useMutation({
+    mutationFn: async (input: { amount: number; cost: number; receipt?: File | null }) => {
+      if (!activeTrip) {
+        throw new Error('No active trip available')
+      }
+
+      setFuelLogError(null)
+      return submitFuelLogWithOffline({
+        tripId: activeTrip.id,
+        amount: input.amount,
+        cost: input.cost,
+        receipt: input.receipt,
+        loggedAt: new Date().toISOString(),
+      })
+    },
+    onSuccess: (result) => {
+      if (result.status === 'sent') {
+        invalidateFuelLogs()
+      }
+    },
+    onError: (error) => {
+      setFuelLogError(error instanceof Error ? error.message : 'Fuel log submission failed')
+    },
   })
 
   const preTripChecklist = checklists.find((checklist) => checklist.type === 'PRE') ?? null
@@ -772,6 +868,18 @@ export function TripExecutionPage() {
               onSubmit={(payload) => podMutation.mutate(payload)}
               onOpenOtpModal={() => setOtpModalOpen(true)}
             />
+
+            <FuelLogPanel
+              tripId={activeTrip.id}
+              logs={fuelLogsQuery.data ?? []}
+              submitting={fuelLogMutation.isPending}
+              submitError={fuelLogError}
+              onSubmit={(input) => fuelLogMutation.mutateAsync({
+                amount: input.amount,
+                cost: input.cost,
+                receipt: input.receipt,
+              })}
+            />
           </div>
 
           <aside className="space-y-6 xl:sticky xl:top-6 xl:self-start">
@@ -812,6 +920,20 @@ export function TripExecutionPage() {
                 </div>
               </div>
             </motion.section>
+
+            <OfflineSyncPanel
+              queuedCount={offlineSyncState.queuedCount}
+              processing={offlineSyncState.processing}
+              receipts={offlineSyncState.receipts}
+              onRetry={() => {
+                void processOfflineQueue()
+                  .then(() => {
+                    invalidateChecklists()
+                    invalidateFuelLogs()
+                  })
+                  .catch(() => undefined)
+              }}
+            />
 
             <ActionPanel
               trip={activeTrip}
