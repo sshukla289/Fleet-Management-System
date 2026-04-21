@@ -9,6 +9,7 @@ import type {
   AuthSession,
   Alert,
   ChangePasswordInput,
+  ChecklistType,
   CompleteTripInput,
   ComplianceCheckResult,
   CreateDriverInput,
@@ -20,14 +21,19 @@ import type {
   DashboardActionQueueItem,
   DashboardAnalytics,
   DashboardExceptionItem,
+  CreateIssueInput,
+  CreateSosInput,
   Driver,
+  DriverIssue,
   DriverAnalytics,
   LoginCredentials,
   MaintenanceAlert,
   MaintenanceSchedule,
   Notification,
   RoutePlan,
+  SosAlert,
   Trip,
+  TripChecklist,
   TripAnalytics,
   TripOptimizationResult,
   TripStatus,
@@ -40,6 +46,7 @@ import type {
   UpdateProfileInput,
   UpdateRoutePlanInput,
   UpdateTripInput,
+  UpdateTripChecklistInput,
   UpdateVehicleInput,
   UserProfile,
   Vehicle,
@@ -77,6 +84,20 @@ type RequestOptions = {
 function getApiBaseUrl() {
   const runtimeConfig = globalThis as { __API_BASE_URL__?: string }
   return (runtimeConfig.__API_BASE_URL__ ?? DEFAULT_API_BASE_URL).replace(/\/$/, '')
+}
+
+export function resolveApiAssetUrl(path: string | null | undefined) {
+  if (!path) {
+    return ''
+  }
+
+  if (/^https?:\/\//i.test(path)) {
+    return path
+  }
+
+  const apiBaseUrl = getApiBaseUrl()
+  const apiOrigin = apiBaseUrl.replace(/\/api$/, '')
+  return `${apiOrigin}${path.startsWith('/') ? path : `/${path}`}`
 }
 
 function readStoredToken() {
@@ -117,10 +138,17 @@ async function parseError(response: Response) {
 async function request<T>(path: string, init?: RequestInit, options: RequestOptions = {}): Promise<T> {
   const shouldAttachAuth = options.auth ?? true
   const token = shouldAttachAuth ? readStoredToken() : null
+  const isFormDataBody = typeof FormData !== 'undefined' && init?.body instanceof FormData
 
   let headers: HeadersInit = {
-    'Content-Type': 'application/json',
     ...(init?.headers ?? {}),
+  }
+
+  if (!isFormDataBody) {
+    headers = {
+      'Content-Type': 'application/json',
+      ...headers,
+    }
   }
 
   if (token) {
@@ -210,6 +238,16 @@ function buildAdminUsersQuery(filters: AdminUsersFilters = {}) {
   return query ? `?${query}` : ''
 }
 
+function buildDriverScopeQuery(driverId?: string) {
+  if (!driverId || !driverId.trim()) {
+    return ''
+  }
+
+  const params = new URLSearchParams()
+  params.set('driverId', driverId.trim())
+  return `?${params.toString()}`
+}
+
 export function fetchTrips(): Promise<Trip[]> {
   return request<Trip[]>('/trips')
 }
@@ -238,9 +276,35 @@ export function startTrip(tripId: string): Promise<Trip> {
   return request<Trip>(`/trips/${tripId}/start`, { method: 'POST' })
 }
 
+export function pauseTrip(tripId: string, reason?: string): Promise<Trip> {
+  const query = reason && reason.trim()
+    ? `?reason=${encodeURIComponent(reason.trim())}`
+    : ''
+  return request<Trip>(`/trips/${tripId}/pause${query}`, { method: 'POST' })
+}
+
+export function resumeTrip(tripId: string): Promise<Trip> {
+  return request<Trip>(`/trips/${tripId}/resume`, { method: 'POST' })
+}
+
 export function completeTrip(tripId: string, input: CompleteTripInput): Promise<Trip> {
   return request<Trip>(`/trips/${tripId}/complete`, {
     method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export function fetchTripChecklists(tripId: string): Promise<TripChecklist[]> {
+  return request<TripChecklist[]>(`/trips/${tripId}/checklists`)
+}
+
+export function updateTripChecklist(
+  tripId: string,
+  type: ChecklistType,
+  input: UpdateTripChecklistInput,
+): Promise<TripChecklist> {
+  return request<TripChecklist>(`/trips/${tripId}/checklists/${type}`, {
+    method: 'PUT',
     body: JSON.stringify(input),
   })
 }
@@ -367,8 +431,38 @@ export function deleteMaintenanceAlert(id: string): Promise<void> {
   return request<void>(`/maintenance-alerts/${id}`, { method: 'DELETE' })
 }
 
-export function fetchAlerts(): Promise<Alert[]> {
-  return request<Alert[]>('/alerts')
+export function fetchAlerts(driverId?: string): Promise<Alert[]> {
+  return request<Alert[]>(`/alerts${buildDriverScopeQuery(driverId)}`)
+}
+
+export function reportIssue(input: CreateIssueInput): Promise<DriverIssue> {
+  const formData = new FormData()
+  formData.set('type', input.type)
+  formData.set('description', input.description)
+  if (input.tripId?.trim()) {
+    formData.set('tripId', input.tripId.trim())
+  }
+  if (typeof input.lat === 'number') {
+    formData.set('lat', String(input.lat))
+  }
+  if (typeof input.lng === 'number') {
+    formData.set('lng', String(input.lng))
+  }
+  if (input.image) {
+    formData.set('image', input.image)
+  }
+
+  return request<DriverIssue>('/issues', {
+    method: 'POST',
+    body: formData,
+  })
+}
+
+export function sendSos(input: CreateSosInput): Promise<SosAlert> {
+  return request<SosAlert>('/sos', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
 }
 
 export function fetchAlertById(id: string): Promise<Alert> {
@@ -383,12 +477,12 @@ export function resolveAlert(id: string): Promise<Alert> {
   return request<Alert>(`/alerts/${id}/resolve`, { method: 'POST' })
 }
 
-export function fetchNotifications(): Promise<Notification[]> {
-  return request<Notification[]>('/notifications')
+export function fetchNotifications(driverId?: string): Promise<Notification[]> {
+  return request<Notification[]>(`/notifications${buildDriverScopeQuery(driverId)}`)
 }
 
-export function fetchNotificationCount(): Promise<number> {
-  return request<number>('/notifications/unread-count')
+export function fetchNotificationCount(driverId?: string): Promise<number> {
+  return request<number>(`/notifications/unread-count${buildDriverScopeQuery(driverId)}`)
 }
 
 export function markNotificationRead(id: string): Promise<Notification> {

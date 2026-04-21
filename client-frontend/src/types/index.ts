@@ -6,7 +6,7 @@ export type AppRole =
   | 'PLANNER'
   | 'OPERATIONS_MANAGER'
   | 'MAINTENANCE_MANAGER'
-export type TripStatus = 'DRAFT' | 'VALIDATED' | 'OPTIMIZED' | 'DISPATCHED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'BLOCKED'
+export type TripStatus = 'DRAFT' | 'VALIDATED' | 'OPTIMIZED' | 'DISPATCHED' | 'IN_PROGRESS' | 'PAUSED' | 'COMPLETED' | 'CANCELLED' | 'BLOCKED'
 export type TripPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
 export type TripDispatchStatus = 'NOT_DISPATCHED' | 'QUEUED' | 'DISPATCHED' | 'RELEASED'
 export type TripComplianceStatus = 'PENDING' | 'COMPLIANT' | 'REVIEW_REQUIRED' | 'BLOCKED'
@@ -24,6 +24,7 @@ export type AlertSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
 export type AlertLifecycleStatus = 'OPEN' | 'ACKNOWLEDGED' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED'
 export type MaintenanceScheduleStatus = 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 export type AdminUserStatus = 'ACTIVE' | 'INACTIVE'
+export type IssueType = 'BREAKDOWN' | 'ACCIDENT' | 'DELAY' | 'OTHER'
 
 export interface Vehicle {
   id: string
@@ -73,12 +74,21 @@ export interface CreateTelemetryInput {
 }
 
 export type StopStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED'
+export type ChecklistType = 'PRE' | 'POST'
+export type ChecklistItemKey =
+  | 'FUEL_OK'
+  | 'TIRES_OK'
+  | 'DOCUMENTS_PRESENT'
+  | 'DELIVERY_COMPLETED'
+  | 'DAMAGES_REPORTED'
 
 
 
 export interface TripStop {
   name: string
   sequence: number
+  latitude?: number | null
+  longitude?: number | null
   status: StopStatus
   arrivalTime?: string
   departureTime?: string
@@ -98,6 +108,7 @@ export interface Trip {
   plannedEndTime?: string
   actualStartTime?: string | null
   actualEndTime?: string | null
+  pausedAt?: string | null
   estimatedDistance: number
   actualDistance: number
   estimatedDuration: string
@@ -106,9 +117,28 @@ export interface Trip {
   complianceStatus: TripComplianceStatus
   optimizationStatus: TripOptimizationStatus
   remarks?: string | null
+  pauseReason?: string | null
   delayMinutes?: number | null
   fuelUsed?: number | null
   completionProcessedAt?: string | null
+}
+
+export interface ChecklistItem {
+  key: ChecklistItemKey | string
+  label: string
+  completed: boolean
+}
+
+export interface TripChecklist {
+  id: string
+  tripId: string
+  type: ChecklistType
+  items: ChecklistItem[]
+  completed: boolean
+}
+
+export interface UpdateTripChecklistInput {
+  items: Array<Pick<ChecklistItem, 'key' | 'completed'>>
 }
 
 export interface ValidationCheck {
@@ -204,6 +234,43 @@ export interface CreateAlertInput {
   relatedTripId?: string
   relatedVehicleId?: string
   metadataJson?: string
+}
+
+export interface DriverIssue {
+  id: string
+  type: IssueType
+  description: string
+  imageUrl?: string | null
+  lat: number
+  lng: number
+  createdAt: string
+  driverId: string
+  tripId?: string | null
+}
+
+export interface CreateIssueInput {
+  type: IssueType
+  description: string
+  tripId?: string
+  lat?: number
+  lng?: number
+  image?: File | null
+}
+
+export interface CreateSosInput {
+  tripId?: string
+  lat?: number
+  lng?: number
+}
+
+export interface SosAlert {
+  alertId: string
+  driverId: string
+  tripId: string
+  lat: number
+  lng: number
+  createdAt: string
+  status: string
 }
 
 export interface MaintenanceSchedule {
@@ -449,7 +516,11 @@ export interface AdminDashboardActivity {
 
 export type NotificationCategory =
   | 'CRITICAL_ALERT'
+  | 'DRIVER_ISSUE'
+  | 'SOS_EMERGENCY'
   | 'TRIP_DISPATCH'
+  | 'TRIP_PAUSE'
+  | 'TRIP_RESUME'
   | 'TRIP_COMPLETION'
   | 'MAINTENANCE_REMINDER'
   | 'COMPLIANCE_REMINDER'

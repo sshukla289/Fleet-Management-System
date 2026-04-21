@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -23,20 +24,25 @@ public class NotificationController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS_MANAGER','DISPATCHER','PLANNER','MAINTENANCE_MANAGER','DRIVER')")
-    public ResponseEntity<List<NotificationDTO>> getNotifications() {
-        return ResponseEntity.ok(notificationService.getNotifications());
+    public ResponseEntity<List<NotificationDTO>> getNotifications(@RequestParam(required = false) String driverId) {
+        return ResponseEntity.ok(notificationService.getNotifications(driverId));
     }
 
     @GetMapping("/unread-count")
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS_MANAGER','DISPATCHER','PLANNER','MAINTENANCE_MANAGER','DRIVER')")
-    public ResponseEntity<Long> getUnreadCount() {
-        return ResponseEntity.ok(notificationService.getUnreadCount());
+    public ResponseEntity<Long> getUnreadCount(@RequestParam(required = false) String driverId) {
+        return ResponseEntity.ok(notificationService.getUnreadCount(driverId));
     }
 
     @PostMapping("/{id}/read")
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS_MANAGER','DISPATCHER','PLANNER','MAINTENANCE_MANAGER','DRIVER')")
-
     public ResponseEntity<NotificationDTO> markAsRead(@PathVariable String id) {
+        return ResponseEntity.ok(notificationService.markRead(id));
+    }
+
+    @PostMapping("/read/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS_MANAGER','DISPATCHER','PLANNER','MAINTENANCE_MANAGER','DRIVER')")
+    public ResponseEntity<NotificationDTO> markAsReadAlias(@PathVariable String id) {
         return ResponseEntity.ok(notificationService.markRead(id));
     }
 }

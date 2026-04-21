@@ -6,6 +6,7 @@ public enum TripStatus {
     OPTIMIZED,
     DISPATCHED,
     IN_PROGRESS,
+    PAUSED,
     COMPLETED,
     CANCELLED,
     BLOCKED

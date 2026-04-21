@@ -86,6 +86,21 @@ public class TripController {
         return ResponseEntity.ok(tripService.startTrip(tripId));
     }
 
+    @PostMapping("/{tripId}/pause")
+    @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS_MANAGER','DISPATCHER','DRIVER')")
+    public ResponseEntity<TripDTO> pauseTrip(
+        @PathVariable String tripId,
+        @RequestParam(required = false) String reason
+    ) {
+        return ResponseEntity.ok(tripService.pauseTrip(tripId, reason));
+    }
+
+    @PostMapping("/{tripId}/resume")
+    @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS_MANAGER','DISPATCHER','DRIVER')")
+    public ResponseEntity<TripDTO> resumeTrip(@PathVariable String tripId) {
+        return ResponseEntity.ok(tripService.resumeTrip(tripId));
+    }
+
     @PostMapping("/{tripId}/complete")
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS_MANAGER','DISPATCHER','DRIVER')")
     public ResponseEntity<TripDTO> completeTrip(

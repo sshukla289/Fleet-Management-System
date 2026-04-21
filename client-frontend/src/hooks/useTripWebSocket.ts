@@ -1,36 +1,42 @@
-import { useEffect, useCallback, useRef } from 'react'
+import { useEffect, useEffectEvent, useRef } from 'react'
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
 import { useTripStore } from '../store/useTripStore'
-
-const WS_URL = 'http://localhost:8080/ws'
+import { getWebSocketBrokerUrl, getWebSocketHttpUrl, readStoredAuthToken } from '../services/websocketService'
 
 export function useTripWebSocket(tripId: string | undefined) {
   const updateTrip = useTripStore((state) => state.updateTripFromSocket)
   const stompClient = useRef<Client | null>(null)
+  const handleIncomingMessage = useEffectEvent((body: string) => {
+    try {
+      updateTrip(JSON.parse(body))
+    } catch (error) {
+      console.error('Failed to parse trip socket payload', error)
+    }
+  })
 
-  const connect = useCallback(() => {
-    if (!tripId) return
+  useEffect(() => {
+    const token = readStoredAuthToken()
+    if (!tripId || !token) {
+      return undefined
+    }
 
     const client = new Client({
-      brokerURL: 'ws://localhost:8080/ws', // Fallback if SockJS fails or not needed
-      webSocketFactory: () => new SockJS(WS_URL),
-      debug: (msg) => console.log('STOMP:', msg),
+      brokerURL: getWebSocketBrokerUrl(),
+      webSocketFactory: () => new SockJS(getWebSocketHttpUrl()),
+      connectHeaders: {
+        Authorization: `Bearer ${token}`,
+      },
+      debug: () => undefined,
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
     })
 
     client.onConnect = () => {
-      console.log('Connected to WebSocket')
       client.subscribe(`/topic/trip/${tripId}`, (message) => {
         if (message.body) {
-          try {
-            const payload = JSON.parse(message.body)
-            updateTrip(payload)
-          } catch (err) {
-            console.error('Failed to parse WS message', err)
-          }
+          handleIncomingMessage(message.body)
         }
       })
     }
@@ -41,19 +47,10 @@ export function useTripWebSocket(tripId: string | undefined) {
 
     client.activate()
     stompClient.current = client
-  }, [tripId, updateTrip])
 
-  const disconnect = useCallback(() => {
-    if (stompClient.current) {
-      stompClient.current.deactivate()
+    return () => {
+      void stompClient.current?.deactivate()
       stompClient.current = null
     }
-  }, [])
-
-  useEffect(() => {
-    if (tripId) {
-      connect()
-    }
-    return () => disconnect()
-  }, [tripId, connect, disconnect])
+  }, [tripId])
 }

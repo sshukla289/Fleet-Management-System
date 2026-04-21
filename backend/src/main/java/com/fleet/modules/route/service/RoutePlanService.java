@@ -240,6 +240,8 @@ public class RoutePlanService {
         return stops.stream().map(s -> new TripStopDTO(
             s.getName(),
             s.getSequence(),
+            s.getLatitude(),
+            s.getLongitude(),
             s.getStatus(),
             s.getArrivalTime(),
             s.getDepartureTime()
@@ -297,6 +299,8 @@ public class RoutePlanService {
         return stops.stream().map(s -> new TripStop(
             s.name(),
             s.sequence(),
+            s.latitude(),
+            s.longitude(),
             s.status() != null ? s.status() : StopStatus.PENDING
         )).toList();
     }

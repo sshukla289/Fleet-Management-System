@@ -44,14 +44,16 @@ public class DashboardAnalyticsService {
 
     private static final List<TripStatus> ACTIVE_TRIP_STATUSES = List.of(
         TripStatus.DISPATCHED,
-        TripStatus.IN_PROGRESS
+        TripStatus.IN_PROGRESS,
+        TripStatus.PAUSED
     );
     private static final List<TripStatus> WORKFLOW_TRIP_STATUSES = List.of(
         TripStatus.DRAFT,
         TripStatus.VALIDATED,
         TripStatus.OPTIMIZED,
         TripStatus.DISPATCHED,
-        TripStatus.IN_PROGRESS
+        TripStatus.IN_PROGRESS,
+        TripStatus.PAUSED
     );
     private static final List<AlertLifecycleStatus> OPEN_ALERT_STATUSES = List.of(
         AlertLifecycleStatus.OPEN,

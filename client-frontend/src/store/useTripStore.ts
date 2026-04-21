@@ -1,14 +1,15 @@
 import { create } from 'zustand'
-import type { Trip, StopStatus } from '../types'
+import type { StopStatus, Trip } from '../types'
 
-interface TripUpdatePayload {
+interface TripRealtimePayload {
   tripId: string
-  latitude: number
-  longitude: number
-  speed: number
-  fuel: number
-  currentStop: string
-  status: StopStatus
+  tripStatus?: Trip['status']
+  latitude?: number | null
+  longitude?: number | null
+  speed?: number | null
+  fuelLevel?: number | null
+  currentStop?: string | null
+  currentStopStatus?: StopStatus | null
   timestamp: string
 }
 
@@ -21,9 +22,8 @@ interface TripState {
     fuel: number
     timestamp: string
   } | null
-  
   setActiveTrip: (trip: Trip | null) => void
-  updateTripFromSocket: (payload: TripUpdatePayload) => void
+  updateTripFromSocket: (payload: TripRealtimePayload) => void
 }
 
 export const useTripStore = create<TripState>((set) => ({
@@ -32,30 +32,40 @@ export const useTripStore = create<TripState>((set) => ({
 
   setActiveTrip: (trip) => set({ activeTrip: trip }),
 
-  updateTripFromSocket: (payload) => set((state) => {
-    if (!state.activeTrip || state.activeTrip.tripId !== payload.tripId) return state
-
-    // Update the active trip stops if needed
-    const updatedTrip = {
-      ...state.activeTrip,
-      // We could also find and update the current stop in the stops array here
-      stops: state.activeTrip.stops.map(stop => {
-        if (stop.name === payload.currentStop) {
-          return { ...stop, status: payload.status }
-        }
-        return stop
-      })
-    }
-
-    return {
-      activeTrip: updatedTrip,
-      telemetry: {
-        lat: payload.latitude,
-        lng: payload.longitude,
-        speed: payload.speed,
-        fuel: payload.fuel,
-        timestamp: payload.timestamp
+  updateTripFromSocket: (payload) =>
+    set((state) => {
+      if (!state.activeTrip || state.activeTrip.tripId !== payload.tripId) {
+        return state
       }
-    }
-  })
+
+      const updatedTrip = {
+        ...state.activeTrip,
+        status: payload.tripStatus ?? state.activeTrip.status,
+        stops: state.activeTrip.stops.map((stop) => {
+          if (stop.name !== payload.currentStop || !payload.currentStopStatus) {
+            return stop
+          }
+
+          return {
+            ...stop,
+            status: payload.currentStopStatus,
+          }
+        }),
+      }
+
+      const nextTelemetry = payload.latitude != null && payload.longitude != null
+        ? {
+            lat: payload.latitude,
+            lng: payload.longitude,
+            speed: payload.speed ?? state.telemetry?.speed ?? 0,
+            fuel: payload.fuelLevel ?? state.telemetry?.fuel ?? 0,
+            timestamp: payload.timestamp,
+          }
+        : state.telemetry
+
+      return {
+        activeTrip: updatedTrip,
+        telemetry: nextTelemetry,
+      }
+    }),
 }))

@@ -103,6 +103,37 @@ public class TripDispatchService {
     }
 
     @Transactional
+    public Trip pause(Trip trip) {
+        if (trip == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Trip is required.");
+        }
+
+        if (trip.getStatus() != TripStatus.IN_PROGRESS) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Trip must be in progress before it can be paused.");
+        }
+
+        trip.setStatus(TripStatus.PAUSED);
+        return trip;
+    }
+
+    @Transactional
+    public Trip resume(Trip trip) {
+        if (trip == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Trip is required.");
+        }
+
+        if (trip.getStatus() != TripStatus.PAUSED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Trip must be paused before it can be resumed.");
+        }
+
+        trip.setStatus(TripStatus.IN_PROGRESS);
+        if (trip.getActualStartTime() == null) {
+            trip.setActualStartTime(LocalDateTime.now());
+        }
+        return trip;
+    }
+
+    @Transactional
     public Trip complete(Trip trip, CompleteTripRequest request) {
         return tripPostProcessingService.finalizeCompletion(trip, request);
     }
@@ -116,7 +147,7 @@ public class TripDispatchService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Completed trips cannot be dispatched again.");
         }
 
-        if (trip.getStatus() == TripStatus.DISPATCHED || trip.getStatus() == TripStatus.IN_PROGRESS) {
+        if (trip.getStatus() == TripStatus.DISPATCHED || trip.getStatus() == TripStatus.IN_PROGRESS || trip.getStatus() == TripStatus.PAUSED) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Trip has already entered dispatch execution flow.");
         }
     }

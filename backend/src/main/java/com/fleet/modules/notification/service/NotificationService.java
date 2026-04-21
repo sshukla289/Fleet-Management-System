@@ -7,6 +7,7 @@ import com.fleet.modules.auth.service.CurrentUserService;
 import com.fleet.modules.audit.service.AuditLogService;
 import com.fleet.modules.driver.entity.Driver;
 import com.fleet.modules.driver.repository.DriverRepository;
+import com.fleet.modules.issue.entity.Issue;
 import com.fleet.modules.maintenance.entity.MaintenanceSchedule;
 import com.fleet.modules.notification.dto.NotificationDTO;
 import com.fleet.modules.notification.entity.Notification;
@@ -33,7 +34,8 @@ public class NotificationService {
         TripStatus.VALIDATED,
         TripStatus.OPTIMIZED,
         TripStatus.DISPATCHED,
-        TripStatus.IN_PROGRESS
+        TripStatus.IN_PROGRESS,
+        TripStatus.PAUSED
     );
 
     private final NotificationRepository notificationRepository;
@@ -41,32 +43,49 @@ public class NotificationService {
     private final CurrentUserService currentUserService;
     private final TripRepository tripRepository;
     private final DriverRepository driverRepository;
+    private final DriverInboxRealtimeService driverInboxRealtimeService;
 
     public NotificationService(
         NotificationRepository notificationRepository,
         AuditLogService auditLogService,
         CurrentUserService currentUserService,
         TripRepository tripRepository,
-        DriverRepository driverRepository
+        DriverRepository driverRepository,
+        DriverInboxRealtimeService driverInboxRealtimeService
     ) {
         this.notificationRepository = notificationRepository;
         this.auditLogService = auditLogService;
         this.currentUserService = currentUserService;
         this.tripRepository = tripRepository;
         this.driverRepository = driverRepository;
+        this.driverInboxRealtimeService = driverInboxRealtimeService;
     }
 
     public List<NotificationDTO> getNotifications() {
+        return getNotifications(null);
+    }
+
+    public List<NotificationDTO> getNotifications(String driverId) {
+        String requestedDriverId = normalizeRequestedDriverId(driverId);
         return notificationRepository.findAllByOrderByCreatedAtDesc().stream()
-            .filter(this::isVisibleToCurrentUser)
+            .filter(notification -> requestedDriverId != null
+                ? isVisibleToDriver(requestedDriverId, notification)
+                : isVisibleToCurrentUser(notification))
             .map(this::toDto)
             .toList();
     }
 
     public long getUnreadCount() {
+        return getUnreadCount(null);
+    }
+
+    public long getUnreadCount(String driverId) {
+        String requestedDriverId = normalizeRequestedDriverId(driverId);
         return notificationRepository.findAll().stream()
             .filter(n -> n.getReadAt() == null)
-            .filter(this::isVisibleToCurrentUser)
+            .filter(notification -> requestedDriverId != null
+                ? isVisibleToDriver(requestedDriverId, notification)
+                : isVisibleToCurrentUser(notification))
             .count();
     }
 
@@ -92,7 +111,7 @@ public class NotificationService {
             );
         }
 
-        return toDto(notification);
+        return publishRealtime(notification);
     }
 
     private void ensureVisibleToCurrentUser(Notification notification) {
@@ -111,8 +130,16 @@ public class NotificationService {
         }
 
         AppUser actor = currentUserService.getRequiredUser();
-        return matchesDriverTrip(actor.getId(), notification.getTripId())
-            || matchesDriverVehicle(actor.getId(), notification.getVehicleId());
+        return isVisibleToDriver(actor.getId(), notification);
+    }
+
+    private boolean isVisibleToDriver(String driverId, Notification notification) {
+        if (driverId == null || driverId.isBlank() || notification == null) {
+            return false;
+        }
+
+        return matchesDriverTrip(driverId, notification.getTripId())
+            || matchesDriverVehicle(driverId, notification.getVehicleId());
     }
 
     private boolean matchesDriverTrip(String driverId, String tripId) {
@@ -209,6 +236,115 @@ public class NotificationService {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public NotificationDTO notifyDriverIssue(
+        Issue issue,
+        NotificationSeverity severity,
+        String driverId,
+        String tripId,
+        String vehicleId,
+        String metadataJson
+    ) {
+        if (issue == null) {
+            return null;
+        }
+
+        return createOrRefresh(
+            NotificationCategory.DRIVER_ISSUE,
+            severity == null ? NotificationSeverity.MEDIUM : severity,
+            "Driver issue: " + issue.getType(),
+            issue.getDescription(),
+            "ISSUE",
+            issue.getId(),
+            tripId,
+            vehicleId,
+            metadataJson != null ? metadataJson : buildMetadata(
+                "driverId", driverId,
+                "tripId", tripId,
+                "issueType", issue.getType(),
+                "imageUrl", issue.getImageUrl(),
+                "lat", issue.getLat(),
+                "lng", issue.getLng(),
+                "createdAt", issue.getCreatedAt()
+            )
+        );
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public NotificationDTO notifyEmergencySos(
+        String driverId,
+        String tripId,
+        String vehicleId,
+        Double lat,
+        Double lng,
+        String metadataJson
+    ) {
+        return createOrRefresh(
+            NotificationCategory.SOS_EMERGENCY,
+            NotificationSeverity.CRITICAL,
+            "Emergency SOS: " + (tripId != null ? tripId : driverId),
+            "A driver triggered an SOS emergency alert and needs immediate assistance.",
+            "SOS",
+            tripId != null ? tripId : driverId,
+            tripId,
+            vehicleId,
+            metadataJson != null ? metadataJson : buildMetadata(
+                "driverId", driverId,
+                "tripId", tripId,
+                "lat", lat,
+                "lng", lng
+            )
+        );
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public NotificationDTO notifyTripPaused(Trip trip) {
+        if (trip == null) {
+            return null;
+        }
+
+        return createOrRefresh(
+            NotificationCategory.TRIP_PAUSE,
+            NotificationSeverity.MEDIUM,
+            "Trip paused: " + trip.getId(),
+            "Trip " + trip.getId() + " has been paused during execution.",
+            "TRIP",
+            trip.getId(),
+            trip.getId(),
+            trip.getAssignedVehicleId(),
+            buildMetadata(
+                "status", trip.getStatus(),
+                "actualStartTime", trip.getActualStartTime(),
+                "pausedAt", trip.getPausedAt(),
+                "pauseReason", trip.getPauseReason()
+            )
+        );
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public NotificationDTO notifyTripResumed(Trip trip) {
+        if (trip == null) {
+            return null;
+        }
+
+        return createOrRefresh(
+            NotificationCategory.TRIP_RESUME,
+            NotificationSeverity.MEDIUM,
+            "Trip resumed: " + trip.getId(),
+            "Trip " + trip.getId() + " is back in motion.",
+            "TRIP",
+            trip.getId(),
+            trip.getId(),
+            trip.getAssignedVehicleId(),
+            buildMetadata(
+                "status", trip.getStatus(),
+                "actualStartTime", trip.getActualStartTime(),
+                "pausedAt", trip.getPausedAt(),
+                "pauseReason", trip.getPauseReason()
+            )
+        );
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public NotificationDTO notifyMaintenanceReminder(MaintenanceSchedule schedule, String message) {
         if (schedule == null) {
             return null;
@@ -276,7 +412,7 @@ public class NotificationService {
         notification.setMetadataJson(metadataJson);
         notification.setReadAt(null);
 
-        return toDto(notificationRepository.save(notification));
+        return publishRealtime(notificationRepository.save(notification));
     }
 
     private NotificationDTO toDto(Notification notification) {
@@ -295,6 +431,12 @@ public class NotificationService {
             notification.getReadAt(),
             notification.getReadAt() != null
         );
+    }
+
+    private NotificationDTO publishRealtime(Notification notification) {
+        NotificationDTO dto = toDto(notification);
+        driverInboxRealtimeService.publishNotification(dto);
+        return dto;
     }
 
     private String nextId() {
@@ -316,6 +458,20 @@ public class NotificationService {
         } catch (NumberFormatException exception) {
             return 0;
         }
+    }
+
+    private String normalizeRequestedDriverId(String driverId) {
+        if (driverId == null || driverId.isBlank()) {
+            return null;
+        }
+
+        String normalizedDriverId = driverId.trim();
+        if (currentUserService.getCurrentRole() == AppRole.DRIVER
+            && !normalizedDriverId.equalsIgnoreCase(currentUserService.getRequiredUser().getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Driver notifications are limited to the current authenticated driver.");
+        }
+
+        return normalizedDriverId;
     }
 
     private String buildMetadata(Object... items) {

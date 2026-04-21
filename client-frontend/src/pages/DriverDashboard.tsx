@@ -6,6 +6,8 @@ import {
   fetchTripTelemetry,
   fetchComplianceCheck,
   fetchAlerts,
+  pauseTrip,
+  resumeTrip,
   startTrip,
   completeTrip,
   updateStopStatus,
@@ -102,7 +104,8 @@ export function DriverDashboard() {
     setLoading(true)
     try {
       const allTrips = await fetchTrips()
-      const current = allTrips.find(t => t.status === 'IN_PROGRESS') 
+      const current = allTrips.find(t => t.status === 'IN_PROGRESS')
+                   || allTrips.find(t => t.status === 'PAUSED')
                    || allTrips.find(t => t.status === 'DISPATCHED')
                    || allTrips[0] 
                    || null
@@ -134,7 +137,7 @@ export function DriverDashboard() {
   }, [message])
 
   useEffect(() => {
-    if (activeTrip && (activeTrip.status === 'IN_PROGRESS' || activeTrip.status === 'DISPATCHED')) {
+    if (activeTrip && (activeTrip.status === 'IN_PROGRESS' || activeTrip.status === 'PAUSED' || activeTrip.status === 'DISPATCHED')) {
       const interval = setInterval(() => {
         void refreshTripData(activeTrip.tripId)
       }, 15000)
@@ -165,6 +168,34 @@ export function DriverDashboard() {
       setMessage(`Stop status updated to ${status.replace('_', ' ')}`)
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Failed to update stop status')
+    } finally {
+      setWorking(false)
+    }
+  }
+
+  const handlePause = async () => {
+    if (!activeTrip) return
+    setWorking(true)
+    try {
+      await pauseTrip(activeTrip.tripId)
+      await loadData()
+      setMessage('Trip paused successfully')
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Failed to pause trip')
+    } finally {
+      setWorking(false)
+    }
+  }
+
+  const handleResume = async () => {
+    if (!activeTrip) return
+    setWorking(true)
+    try {
+      await resumeTrip(activeTrip.tripId)
+      await loadData()
+      setMessage('Trip resumed successfully')
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Failed to resume trip')
     } finally {
       setWorking(false)
     }
@@ -218,7 +249,7 @@ export function DriverDashboard() {
   const timelineSteps = [
     { label: 'Assigned', time: formatDateTime(activeTrip.plannedStartTime), done: true },
     { label: 'Dispatched', time: activeTrip.dispatchStatus !== 'NOT_DISPATCHED' ? 'Confirmed' : 'Pending', done: ['DISPATCHED', 'RELEASED'].includes(activeTrip.dispatchStatus) },
-    { label: 'In Transit', time: formatDateTime(activeTrip.actualStartTime), done: ['IN_PROGRESS', 'COMPLETED'].includes(activeTrip.status) },
+    { label: 'In Transit', time: formatDateTime(activeTrip.actualStartTime), done: ['IN_PROGRESS', 'PAUSED', 'COMPLETED'].includes(activeTrip.status) },
     { label: 'Delivered', time: formatDateTime(activeTrip.actualEndTime), done: activeTrip.status === 'COMPLETED' },
   ]
 
@@ -229,7 +260,7 @@ export function DriverDashboard() {
       <section className="dd-hero">
         <div className="dd-hero__top">
           <div className="dd-hero__badges">
-            <span className={`dd-pill ${activeTrip.status === 'COMPLETED' ? 'dd-pill--green' : activeTrip.status === 'IN_PROGRESS' ? 'dd-pill--blue' : 'dd-pill--amber'}`}>
+            <span className={`dd-pill ${activeTrip.status === 'COMPLETED' ? 'dd-pill--green' : activeTrip.status === 'IN_PROGRESS' ? 'dd-pill--blue' : activeTrip.status === 'PAUSED' ? 'dd-pill--amber' : 'dd-pill--amber'}`}>
               {activeTrip.status.replace('_', ' ')}
             </span>
             <span className="dd-pill dd-pill--blue">{activeTrip.priority}</span>
@@ -278,6 +309,16 @@ export function DriverDashboard() {
               Start Trip
             </button>
           )}
+          {activeTrip.status === 'IN_PROGRESS' && (
+            <button className="dd-btn dd-btn--secondary" onClick={handlePause} disabled={working}>
+              Pause Trip
+            </button>
+          )}
+          {activeTrip.status === 'PAUSED' && (
+            <button className="dd-btn dd-btn--primary" onClick={handleResume} disabled={working}>
+              Resume Trip
+            </button>
+          )}
           <button className="dd-btn dd-btn--ghost" onClick={() => window.open(`https://www.google.com/maps/dir/${encodeURIComponent(activeTrip.source)}/${activeTrip.destination}`, '_blank')}>
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
             Navigate
@@ -298,7 +339,7 @@ export function DriverDashboard() {
             <TripRoute 
               stops={activeTrip.stops} 
               isLoading={loading} 
-              onUpdateStatus={handleStopStatusUpdate}
+              onUpdateStatus={activeTrip.status === 'IN_PROGRESS' ? handleStopStatusUpdate : undefined}
             />
           </div>
 

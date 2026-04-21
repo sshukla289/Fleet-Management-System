@@ -22,3 +22,12 @@ Useful commands:
 - `docker compose restart backend`
 - `docker compose down`
 - `docker compose down -v`
+
+Backend wrapper commands outside Docker:
+- `cd backend`
+- `.\mvnw.cmd spring-boot:run`
+- `.\mvnw.cmd test`
+
+Notes:
+- The backend repo includes a Maven wrapper, so a separate Maven install is optional for local Windows development.
+- On macOS or Linux, use `./mvnw spring-boot:run` and `./mvnw test`.

@@ -3,15 +3,36 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/fleet_db}
     username: ${SPRING_DATASOURCE_USERNAME:root}
     password: ${SPRING_DATASOURCE_PASSWORD:root}
+  servlet:
+    multipart:
+      max-file-size: ${SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE:5MB}
+      max-request-size: ${SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE:6MB}
 
   jpa:
     hibernate:
       ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
     show-sql: ${SPRING_JPA_SHOW_SQL:false}
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
 
 app:
   seed:
     enabled: ${APP_SEED_ENABLED:false}
+  websocket:
+    allowed-origin-patterns: ${APP_WEBSOCKET_ALLOWED_ORIGIN_PATTERNS:http://localhost:5173,http://127.0.0.1:5173}
+  tracking:
+    overspeed-threshold-kph: ${APP_TRACKING_OVERSPEED_THRESHOLD_KPH:80}
+    idle-threshold-seconds: ${APP_TRACKING_IDLE_THRESHOLD_SECONDS:120}
+    movement-threshold-meters: ${APP_TRACKING_MOVEMENT_THRESHOLD_METERS:25}
+    persist-interval-seconds: ${APP_TRACKING_PERSIST_INTERVAL_SECONDS:30}
+    route-deviation-threshold-meters: ${APP_TRACKING_ROUTE_DEVIATION_THRESHOLD_METERS:250}
+    route-recovery-threshold-meters: ${APP_TRACKING_ROUTE_RECOVERY_THRESHOLD_METERS:150}
+    route-deviation-debounce-seconds: ${APP_TRACKING_ROUTE_DEVIATION_DEBOUNCE_SECONDS:20}
+    latest-state-ttl-hours: ${APP_TRACKING_LATEST_STATE_TTL_HOURS:24}
+  storage:
+    public-root-dir: ${APP_STORAGE_PUBLIC_ROOT_DIR:uploads}
 
 server:
   port: ${SERVER_PORT:8080}

@@ -20,6 +20,10 @@ const titles: Record<string, { title: string; subtitle: string }> = {
     title: 'Driver Dashboard',
     subtitle: 'Manage your active trips, routes, and operational checklists.',
   },
+  '/driver/trip-execution': {
+    title: 'Trip Execution',
+    subtitle: 'Complete pre-trip and post-trip checklists before each driver action.',
+  },
   '/dispatcher/dashboard': {
     title: 'Dispatcher Dashboard',
     subtitle: 'Real-time fleet command: monitoring, driver assignment, and live alerts.',
@@ -113,6 +117,18 @@ export function Navbar() {
     void loadCount()
     const interval = setInterval(() => void loadCount(), 30000)
     return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    const handleCountUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<number>).detail
+      if (typeof detail === 'number') {
+        setUnreadCount(detail)
+      }
+    }
+
+    window.addEventListener('fleet:notifications:count', handleCountUpdate as EventListener)
+    return () => window.removeEventListener('fleet:notifications:count', handleCountUpdate as EventListener)
   }, [])
 
   return (

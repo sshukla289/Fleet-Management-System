@@ -1,6 +1,6 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { MapView } from '../components/MapView'
+import { RoutePreviewMap } from '../components/RoutePreviewMap'
 import {
   createRoutePlan,
   deleteRoutePlan,
@@ -8,8 +8,7 @@ import {
   optimizeRoutes,
   updateRoutePlan,
 } from '../services/apiService'
-import type { CreateRoutePlanInput, RoutePlan, StopStatus } from '../types'
-
+import type { CreateRoutePlanInput, RoutePlan, StopStatus, TripStop } from '../types'
 
 function routeStatusClass(status: RoutePlan['status']) {
   if (status === 'Completed') {
@@ -29,6 +28,47 @@ const initialForm: CreateRoutePlanInput = {
   distanceKm: 0,
   estimatedDuration: '',
   stops: [],
+}
+
+function createEmptyStop(sequence: number): TripStop {
+  return {
+    name: '',
+    sequence,
+    latitude: null,
+    longitude: null,
+    status: 'PENDING',
+  }
+}
+
+function normalizeStops(stops: TripStop[]) {
+  return stops
+    .map((stop, index) => ({
+      ...stop,
+      sequence: index + 1,
+      name: stop.name.trim(),
+      latitude: typeof stop.latitude === 'number' && Number.isFinite(stop.latitude) ? stop.latitude : null,
+      longitude: typeof stop.longitude === 'number' && Number.isFinite(stop.longitude) ? stop.longitude : null,
+    }))
+    .filter((stop) => stop.name)
+}
+
+function parseCoordinateInput(value: string) {
+  if (!value.trim()) {
+    return null
+  }
+
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function isCoordinateWithinRange(value: number | null, type: 'latitude' | 'longitude') {
+  if (value == null) {
+    return false
+  }
+
+  return type === 'latitude'
+    ? value >= -90 && value <= 90
+    : value >= -180 && value <= 180
 }
 
 function formatDistanceInput(value: string) {
@@ -97,7 +137,6 @@ export function RoutePlanner() {
   const [editingRouteId, setEditingRouteId] = useState<string | null>(null)
   const [deletingRouteId, setDeletingRouteId] = useState<string | null>(null)
   const [distanceInput, setDistanceInput] = useState('0')
-  const [stopsInput, setStopsInput] = useState('')
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [form, setForm] = useState<CreateRoutePlanInput>(initialForm)
@@ -132,6 +171,11 @@ export function RoutePlanner() {
 
   const primaryRoute =
     orderedRoutes.find((route) => route.id === selectedRouteId) ?? orderedRoutes[0]
+
+  const previewStops = useMemo(
+    () => (showForm ? form.stops : (primaryRoute?.stops ?? [])),
+    [form.stops, primaryRoute, showForm],
+  )
 
   async function handleOptimizeRoutes() {
     setIsOptimizing(true)
@@ -171,18 +215,34 @@ export function RoutePlanner() {
       return
     }
 
+    const normalizedStops = normalizeStops(form.stops)
+
+    if (normalizedStops.length < 2) {
+      setError('Add at least two stops with coordinates to create a route geometry.')
+      return
+    }
+
+    const stopWithMissingCoordinates = normalizedStops.find(
+      (stop) => stop.latitude == null || stop.longitude == null,
+    )
+    if (stopWithMissingCoordinates) {
+      setError(`Stop "${stopWithMissingCoordinates.name}" is missing latitude or longitude.`)
+      return
+    }
+
+    const stopWithInvalidCoordinates = normalizedStops.find(
+      (stop) => !isCoordinateWithinRange(stop.latitude ?? null, 'latitude')
+        || !isCoordinateWithinRange(stop.longitude ?? null, 'longitude'),
+    )
+    if (stopWithInvalidCoordinates) {
+      setError(`Stop "${stopWithInvalidCoordinates.name}" has coordinates outside the valid range.`)
+      return
+    }
+
     const nextForm: CreateRoutePlanInput = {
       ...form,
       distanceKm: parsedDistance,
-      stops: stopsInput
-        .split(',')
-        .map((stop, index) => ({
-          name: stop.trim(),
-          sequence: index + 1,
-          status: 'PENDING' as StopStatus
-        }))
-
-        .filter((s) => s.name),
+      stops: normalizedStops,
     }
 
     try {
@@ -232,10 +292,9 @@ export function RoutePlanner() {
       status: route.status,
       distanceKm: route.distanceKm,
       estimatedDuration: route.estimatedDuration,
-      stops: route.stops,
+      stops: route.stops.map((stop) => ({ ...stop })),
     })
     setDistanceInput(formatDistanceInput(String(route.distanceKm)))
-    setStopsInput(route.stops.map(s => s.name).join(', '))
     setEditingRouteId(route.id)
     setShowForm(true)
     setSelectedRouteId(route.id)
@@ -246,10 +305,50 @@ export function RoutePlanner() {
   function resetForm() {
     setForm(initialForm)
     setDistanceInput('0')
-    setStopsInput('')
     setEditingRouteId(null)
     setShowForm(false)
     setError('')
+  }
+
+  function updateStop(index: number, nextStop: TripStop) {
+    setForm((current) => ({
+      ...current,
+      stops: current.stops.map((stop, stopIndex) => (stopIndex === index ? nextStop : stop)),
+    }))
+  }
+
+  function addStop() {
+    setForm((current) => ({
+      ...current,
+      stops: [...current.stops, createEmptyStop(current.stops.length + 1)],
+    }))
+  }
+
+  function removeStop(index: number) {
+    setForm((current) => ({
+      ...current,
+      stops: current.stops
+        .filter((_, stopIndex) => stopIndex !== index)
+        .map((stop, stopIndex) => ({ ...stop, sequence: stopIndex + 1 })),
+    }))
+  }
+
+  function moveStop(index: number, direction: -1 | 1) {
+    setForm((current) => {
+      const nextStops = [...current.stops]
+      const targetIndex = index + direction
+      if (targetIndex < 0 || targetIndex >= nextStops.length) {
+        return current
+      }
+
+      const [moved] = nextStops.splice(index, 1)
+      nextStops.splice(targetIndex, 0, moved)
+
+      return {
+        ...current,
+        stops: nextStops.map((stop, stopIndex) => ({ ...stop, sequence: stopIndex + 1 })),
+      }
+    })
   }
 
   return (
@@ -285,7 +384,7 @@ export function RoutePlanner() {
           <div className="panel__header">
             <div>
               <h3>{editingRouteId ? `Edit ${editingRouteId}` : 'Create route'}</h3>
-              <p className="muted">Define route metadata and comma-separated stops for dispatch planning.</p>
+              <p className="muted">Define route metadata, ordered stops, and coordinates for route preview and live deviation detection.</p>
             </div>
           </div>
           <div className="form-grid">
@@ -316,16 +415,103 @@ export function RoutePlanner() {
               <span>Estimated duration</span>
               <input onChange={(event) => setForm({ ...form, estimatedDuration: event.target.value })} required type="text" value={form.estimatedDuration} />
             </label>
-            <label className="input-group input-group--full">
-              <span>Stops</span>
-              <textarea
-                onChange={(event) => setStopsInput(event.target.value)}
-                placeholder="Mumbai Hub, Pune Depot, Satara Crossdock"
-                required
-                value={stopsInput}
-              />
-            </label>
           </div>
+
+          <div className="route-stop-editor">
+            <div className="route-stop-editor__header">
+              <div>
+                <h4>Stops & coordinates</h4>
+                <p className="muted">Every stop needs a name, latitude, and longitude so planners can preview and monitor the route geometry.</p>
+              </div>
+              <button className="secondary-button" onClick={addStop} type="button">
+                Add stop
+              </button>
+            </div>
+
+            <div className="route-stop-editor__list">
+              {form.stops.length > 0 ? form.stops.map((stop, index) => (
+                <div key={`stop-row-${index}`} className="route-stop-editor__row">
+                  <div className="route-stop-editor__row-head">
+                    <span className="route-stop-editor__sequence">Stop {index + 1}</span>
+                    <div className="route-stop-editor__row-actions">
+                      <button
+                        className="secondary-button"
+                        disabled={index === 0}
+                        onClick={() => moveStop(index, -1)}
+                        type="button"
+                      >
+                        Up
+                      </button>
+                      <button
+                        className="secondary-button"
+                        disabled={index === form.stops.length - 1}
+                        onClick={() => moveStop(index, 1)}
+                        type="button"
+                      >
+                        Down
+                      </button>
+                      <button className="secondary-button danger-button" onClick={() => removeStop(index)} type="button">
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="route-stop-editor__fields">
+                    <label className="input-group">
+                      <span>Name</span>
+                      <input
+                        onChange={(event) => updateStop(index, { ...stop, name: event.target.value })}
+                        placeholder="Mumbai Hub"
+                        required
+                        type="text"
+                        value={stop.name}
+                      />
+                    </label>
+                    <label className="input-group">
+                      <span>Latitude</span>
+                      <input
+                        inputMode="decimal"
+                        onChange={(event) => updateStop(index, { ...stop, latitude: parseCoordinateInput(event.target.value) })}
+                        placeholder="19.0760"
+                        required
+                        step="any"
+                        type="number"
+                        value={stop.latitude ?? ''}
+                      />
+                    </label>
+                    <label className="input-group">
+                      <span>Longitude</span>
+                      <input
+                        inputMode="decimal"
+                        onChange={(event) => updateStop(index, { ...stop, longitude: parseCoordinateInput(event.target.value) })}
+                        placeholder="72.8777"
+                        required
+                        step="any"
+                        type="number"
+                        value={stop.longitude ?? ''}
+                      />
+                    </label>
+                    <label className="input-group">
+                      <span>Status</span>
+                      <select
+                        onChange={(event) => updateStop(index, { ...stop, status: event.target.value as StopStatus })}
+                        value={stop.status}
+                      >
+                        <option value="PENDING">Pending</option>
+                        <option value="IN_PROGRESS">In Progress</option>
+                        <option value="COMPLETED">Completed</option>
+                      </select>
+                    </label>
+                  </div>
+                </div>
+              )) : (
+                <div className="route-stop-editor__empty">
+                  Add your first stop to start defining the route geometry.
+                </div>
+              )}
+            </div>
+          </div>
+
           {error ? <div className="form-error">{error}</div> : null}
           <div className="form-actions">
             <button className="primary-button" type="submit">
@@ -338,7 +524,15 @@ export function RoutePlanner() {
         </form>
       ) : null}
 
-      {primaryRoute ? <MapView title={primaryRoute.name} stops={primaryRoute.stops.map(s => s.name)} /> : null}
+      {(primaryRoute || showForm) ? (
+        <RoutePreviewMap
+          title={showForm ? (editingRouteId ? `Draft ${editingRouteId}` : 'Draft route preview') : primaryRoute?.name ?? 'Route preview'}
+          stops={previewStops}
+          subtitle={showForm
+            ? 'Live preview of the route geometry you are creating or editing.'
+            : 'Stored route geometry with stop coordinates and path sequence.'}
+        />
+      ) : null}
 
       {successMessage ? <div className="form-success">{successMessage}</div> : null}
       {error && !showForm ? <div className="form-error">{error}</div> : null}
@@ -360,6 +554,9 @@ export function RoutePlanner() {
               <span className="badge">{route.distanceKm} km</span>
               <span className="badge">{route.estimatedDuration}</span>
               <span className="badge">{route.stops.length} stops</span>
+              <span className="badge">
+                {route.stops.filter((stop) => typeof stop.latitude === 'number' && typeof stop.longitude === 'number').length} mapped
+              </span>
             </div>
             <div className="map-view__stops">
               {route.stops.map((stop, idx) => (

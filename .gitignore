@@ -4,6 +4,7 @@
 
 # Backend build artifacts
 backend/target/
+backend/.m2/
 *.jar
 *.war
 *.ear

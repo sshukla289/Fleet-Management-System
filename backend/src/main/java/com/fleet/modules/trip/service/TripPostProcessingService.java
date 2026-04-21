@@ -1,5 +1,9 @@
 package com.fleet.modules.trip.service;
 
+import com.fleet.modules.alert.dto.CreateAlertRequest;
+import com.fleet.modules.alert.entity.AlertCategory;
+import com.fleet.modules.alert.entity.AlertSeverity;
+import com.fleet.modules.alert.service.AlertService;
 import com.fleet.modules.audit.service.AuditLogService;
 import com.fleet.modules.auth.service.CurrentUserService;
 import com.fleet.modules.driver.entity.Driver;
@@ -37,6 +41,7 @@ public class TripPostProcessingService {
     private final DriverRepository driverRepository;
     private final TelemetryRepository telemetryRepository;
     private final MaintenanceScheduleRepository maintenanceScheduleRepository;
+    private final AlertService alertService;
     private final NotificationService notificationService;
     private final AuditLogService auditLogService;
     private final CurrentUserService currentUserService;
@@ -46,6 +51,7 @@ public class TripPostProcessingService {
         DriverRepository driverRepository,
         TelemetryRepository telemetryRepository,
         MaintenanceScheduleRepository maintenanceScheduleRepository,
+        AlertService alertService,
         NotificationService notificationService,
         AuditLogService auditLogService,
         CurrentUserService currentUserService
@@ -54,6 +60,7 @@ public class TripPostProcessingService {
         this.driverRepository = driverRepository;
         this.telemetryRepository = telemetryRepository;
         this.maintenanceScheduleRepository = maintenanceScheduleRepository;
+        this.alertService = alertService;
         this.notificationService = notificationService;
         this.auditLogService = auditLogService;
         this.currentUserService = currentUserService;
@@ -114,12 +121,24 @@ public class TripPostProcessingService {
         driverRepository.save(driver);
 
         notificationService.notifyTripCompleted(trip);
+        maybeCreateDelayAlert(trip, vehicle);
         if (needsMaintenanceReminder(previousMileage, actualDistance)) {
             MaintenanceSchedule reminder = findOrCreateMaintenanceReminder(vehicle, trip);
             notificationService.notifyMaintenanceReminder(
                 reminder,
                 "Vehicle " + vehicle.getId() + " crossed the maintenance mileage threshold after trip completion."
             );
+            alertService.createAlert(new CreateAlertRequest(
+                AlertCategory.MAINTENANCE,
+                AlertSeverity.MEDIUM,
+                "Maintenance check due",
+                "Vehicle " + vehicle.getId() + " crossed the maintenance mileage threshold after trip " + trip.getId() + ".",
+                "trip_completion",
+                trip.getId(),
+                trip.getId(),
+                vehicle.getId(),
+                "{\"maintenanceScheduleId\":\"" + reminder.getId() + "\",\"vehicleId\":\"" + vehicle.getId() + "\"}"
+            ));
         }
 
         auditLogService.record(
@@ -139,6 +158,35 @@ public class TripPostProcessingService {
         );
 
         return trip;
+    }
+
+    private void maybeCreateDelayAlert(Trip trip, Vehicle vehicle) {
+        if (trip.getDelayMinutes() == null || trip.getDelayMinutes() <= 0) {
+            return;
+        }
+
+        alertService.createAlert(new CreateAlertRequest(
+            AlertCategory.TRIP_DELAY,
+            resolveDelaySeverity(trip.getDelayMinutes()),
+            "Trip delay recorded",
+            "Trip " + trip.getId() + " completed " + trip.getDelayMinutes() + " minutes behind schedule.",
+            "trip_completion",
+            trip.getId(),
+            trip.getId(),
+            vehicle.getId(),
+            "{\"delayMinutes\":" + trip.getDelayMinutes() + "}"
+        ));
+    }
+
+    private AlertSeverity resolveDelaySeverity(Integer delayMinutes) {
+        int safeDelay = delayMinutes == null ? 0 : Math.max(0, delayMinutes);
+        if (safeDelay >= 60) {
+            return AlertSeverity.HIGH;
+        }
+        if (safeDelay >= 15) {
+            return AlertSeverity.MEDIUM;
+        }
+        return AlertSeverity.LOW;
     }
 
     private String normalizeDuration(String requestedDuration, Trip trip) {

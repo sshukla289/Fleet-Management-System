@@ -23,6 +23,7 @@ public record TripDTO(
     LocalDateTime plannedEndTime,
     LocalDateTime actualStartTime,
     LocalDateTime actualEndTime,
+    LocalDateTime pausedAt,
     int estimatedDistance,
     int actualDistance,
     String estimatedDuration,
@@ -31,6 +32,7 @@ public record TripDTO(
     TripComplianceStatus complianceStatus,
     TripOptimizationStatus optimizationStatus,
     String remarks,
+    String pauseReason,
     Integer delayMinutes,
     Double fuelUsed,
     LocalDateTime completionProcessedAt

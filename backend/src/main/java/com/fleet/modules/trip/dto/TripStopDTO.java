@@ -6,6 +6,8 @@ import java.time.LocalDateTime;
 public record TripStopDTO(
     String name,
     int sequence,
+    Double latitude,
+    Double longitude,
     StopStatus status,
     LocalDateTime arrivalTime,
     LocalDateTime departureTime

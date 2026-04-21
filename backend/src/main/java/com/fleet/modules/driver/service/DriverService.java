@@ -173,7 +173,8 @@ public class DriverService {
             TripStatus.VALIDATED,
             TripStatus.OPTIMIZED,
             TripStatus.DISPATCHED,
-            TripStatus.IN_PROGRESS
+            TripStatus.IN_PROGRESS,
+            TripStatus.PAUSED
         );
 
         tripRepository

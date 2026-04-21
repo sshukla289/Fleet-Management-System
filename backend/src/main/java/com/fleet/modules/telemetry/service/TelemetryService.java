@@ -123,7 +123,7 @@ public class TelemetryService {
         return tripRepository
             .findTopByAssignedVehicleIdAndStatusInOrderByPlannedStartTimeDesc(
                 vehicleId,
-                List.of(TripStatus.DISPATCHED, TripStatus.IN_PROGRESS, TripStatus.VALIDATED, TripStatus.OPTIMIZED)
+                List.of(TripStatus.DISPATCHED, TripStatus.IN_PROGRESS, TripStatus.PAUSED, TripStatus.VALIDATED, TripStatus.OPTIMIZED)
             )
             .orElse(null);
     }
@@ -150,7 +150,7 @@ public class TelemetryService {
         boolean ownsVehicleTrip = tripRepository
             .findTopByAssignedDriverIdAndStatusInOrderByPlannedStartTimeDesc(
                 actorId,
-                List.of(TripStatus.DISPATCHED, TripStatus.IN_PROGRESS)
+                List.of(TripStatus.DISPATCHED, TripStatus.IN_PROGRESS, TripStatus.PAUSED)
             )
             .map(trip -> vehicleId.equalsIgnoreCase(String.valueOf(trip.getAssignedVehicleId())))
             .orElse(false);

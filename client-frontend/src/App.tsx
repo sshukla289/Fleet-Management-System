@@ -1,30 +1,32 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState, type ReactNode } from 'react'
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { Navbar } from './components/Navbar'
 import { Sidebar } from './components/Sidebar'
+import { DriverEmergencyHub } from './components/DriverEmergencyHub'
 import { useAuth } from './context/useAuth'
 import { hasAnyRole } from './security/permissions'
-import { AdminDashboard } from './pages/AdminDashboard'
-import { AdminUsersPage } from './pages/AdminUsers'
-import { AnalyticsReports } from './pages/AnalyticsReports'
-import { AuditLogs } from './pages/AuditLogs'
-import { AlertsCenter } from './pages/AlertsCenter'
-import { DriverList } from './pages/DriverList'
-import { Login } from './pages/Login'
-import { MaintenanceAlerts } from './pages/MaintenanceAlerts'
-import { MaintenanceDashboard } from './pages/MaintenanceDashboard'
-import { OperationsDashboard } from './pages/OperationsDashboard'
-import { Profile } from './pages/Profile'
-import { RoutePlanner } from './pages/RoutePlanner'
-import { PlannerDashboard } from './pages/PlannerDashboard'
-import { Trips } from './pages/Trips'
-import { DriverDashboard } from './pages/DriverDashboard'
-import { DispatcherDashboard } from './pages/DispatcherDashboard'
-import { Notifications } from './pages/Notifications'
-import { VehicleDetail } from './pages/VehicleDetail'
-import { VehicleList } from './pages/VehicleList'
 import type { AppRole } from './types'
 import './App.css'
+
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard').then((module) => ({ default: module.AdminDashboard })))
+const AdminUsersPage = lazy(() => import('./pages/AdminUsers').then((module) => ({ default: module.AdminUsersPage })))
+const AnalyticsReports = lazy(() => import('./pages/AnalyticsReports').then((module) => ({ default: module.AnalyticsReports })))
+const AuditLogs = lazy(() => import('./pages/AuditLogs').then((module) => ({ default: module.AuditLogs })))
+const AlertsCenter = lazy(() => import('./pages/AlertsCenter').then((module) => ({ default: module.AlertsCenter })))
+const DriverList = lazy(() => import('./pages/DriverList').then((module) => ({ default: module.DriverList })))
+const DispatcherDashboard = lazy(() => import('./pages/DispatcherDashboard').then((module) => ({ default: module.DispatcherDashboard })))
+const Login = lazy(() => import('./pages/Login').then((module) => ({ default: module.Login })))
+const MaintenanceAlerts = lazy(() => import('./pages/MaintenanceAlerts').then((module) => ({ default: module.MaintenanceAlerts })))
+const MaintenanceDashboard = lazy(() => import('./pages/MaintenanceDashboard').then((module) => ({ default: module.MaintenanceDashboard })))
+const Notifications = lazy(() => import('./pages/Notifications').then((module) => ({ default: module.Notifications })))
+const OperationsDashboard = lazy(() => import('./pages/OperationsDashboard').then((module) => ({ default: module.OperationsDashboard })))
+const PlannerDashboard = lazy(() => import('./pages/PlannerDashboard').then((module) => ({ default: module.PlannerDashboard })))
+const Profile = lazy(() => import('./pages/Profile').then((module) => ({ default: module.Profile })))
+const RoutePlanner = lazy(() => import('./pages/RoutePlanner').then((module) => ({ default: module.RoutePlanner })))
+const Trips = lazy(() => import('./pages/Trips').then((module) => ({ default: module.Trips })))
+const TripExecutionPage = lazy(() => import('./pages/TripExecutionPage').then((module) => ({ default: module.TripExecutionPage })))
+const VehicleDetail = lazy(() => import('./pages/VehicleDetail').then((module) => ({ default: module.VehicleDetail })))
+const VehicleList = lazy(() => import('./pages/VehicleList').then((module) => ({ default: module.VehicleList })))
 
 function LoadingScreen() {
   return (
@@ -38,6 +40,10 @@ function LoadingScreen() {
       </div>
     </div>
   )
+}
+
+function RouteLoader({ children }: { children: ReactNode }) {
+  return <Suspense fallback={<LoadingScreen />}>{children}</Suspense>
 }
 
 function ProtectedLayout() {
@@ -56,6 +62,7 @@ function ProtectedLayout() {
 
 function AppLayout() {
   const [collapsed, setCollapsed] = useState(false)
+  const { session } = useAuth()
 
   return (
     <div className={`app-shell__body${collapsed ? ' app-shell__body--collapsed' : ''}`}>
@@ -65,6 +72,7 @@ function AppLayout() {
         <main className="app-shell__main">
           <Outlet />
         </main>
+        {session?.profile.role === 'DRIVER' && <DriverEmergencyHub />}
       </div>
     </div>
   )
@@ -72,7 +80,7 @@ function AppLayout() {
 
 function defaultPathForRole(role: string | undefined): string {
   if (hasAnyRole(role, ['DRIVER'])) {
-    return '/driver/dashboard'
+    return '/driver/trip-execution'
   }
 
   if (hasAnyRole(role, ['ADMIN'])) {
@@ -116,7 +124,7 @@ function App() {
     <Routes>
       <Route
         path="/login"
-        element={isAuthenticated ? <Navigate to={defaultPath} replace /> : <Login />}
+        element={isAuthenticated ? <Navigate to={defaultPath} replace /> : <RouteLoader><Login /></RouteLoader>}
       />
       <Route element={<ProtectedLayout />}>
         <Route
@@ -126,50 +134,55 @@ function App() {
         
         {/* Role-based dashboard aliases */}
         <Route path="/admin/dashboard" element={<RoleRoute allowedRoles={['ADMIN']} />}>
-          <Route index element={<AdminDashboard />} />
+          <Route index element={<RouteLoader><AdminDashboard /></RouteLoader>} />
         </Route>
         <Route path="/admin/users" element={<RoleRoute allowedRoles={['ADMIN']} />}>
-          <Route index element={<AdminUsersPage />} />
+          <Route index element={<RouteLoader><AdminUsersPage /></RouteLoader>} />
         </Route>
         <Route path="/maintenance/dashboard" element={<RoleRoute allowedRoles={['MAINTENANCE_MANAGER']} />}>
-          <Route index element={<MaintenanceDashboard />} />
+          <Route index element={<RouteLoader><MaintenanceDashboard /></RouteLoader>} />
         </Route>
         <Route path="/driver/dashboard" element={<RoleRoute allowedRoles={['DRIVER']} />}>
-          <Route index element={<DriverDashboard />} />
+          <Route index element={<Navigate to="/driver/trip-execution" replace />} />
+        </Route>
+        <Route path="/driver/trip-execution" element={<RoleRoute allowedRoles={['DRIVER']} />}>
+          <Route index element={<RouteLoader><TripExecutionPage /></RouteLoader>} />
         </Route>
         <Route path="/dispatcher/dashboard" element={<RoleRoute allowedRoles={['DISPATCHER']} />}>
-          <Route index element={<DispatcherDashboard />} />
+          <Route index element={<RouteLoader><DispatcherDashboard /></RouteLoader>} />
         </Route>
         <Route path="/planner/dashboard" element={<RoleRoute allowedRoles={['PLANNER']} />}>
-          <Route index element={<PlannerDashboard />} />
+          <Route index element={<RouteLoader><PlannerDashboard /></RouteLoader>} />
         </Route>
         <Route path="/operations/dashboard" element={<RoleRoute allowedRoles={['OPERATIONS_MANAGER']} />}>
-          <Route index element={<OperationsDashboard />} />
+          <Route index element={<RouteLoader><OperationsDashboard /></RouteLoader>} />
         </Route>
 
         <Route element={<RoleRoute allowedRoles={['ADMIN', 'OPERATIONS_MANAGER', 'DISPATCHER', 'PLANNER', 'MAINTENANCE_MANAGER', 'DRIVER']} />}>
           <Route path="/dashboard" element={<Navigate to={defaultPath} replace />} />
-          <Route path="/analytics/reports" element={<AnalyticsReports />} />
+          <Route path="/analytics/reports" element={<RouteLoader><AnalyticsReports /></RouteLoader>} />
         </Route>
         <Route element={<RoleRoute allowedRoles={['ADMIN', 'OPERATIONS_MANAGER']} />}>
-          <Route path="/audit-logs" element={<AuditLogs />} />
+          <Route path="/audit-logs" element={<RouteLoader><AuditLogs /></RouteLoader>} />
         </Route>
         <Route element={<RoleRoute allowedRoles={['ADMIN', 'OPERATIONS_MANAGER', 'DISPATCHER', 'PLANNER', 'MAINTENANCE_MANAGER', 'DRIVER']} />}>
-          <Route path="/notifications" element={<Notifications />} />
-          <Route path="/alerts" element={<AlertsCenter />} />
-          <Route path="/trips" element={<Trips />} />
-          <Route path="/profile" element={<Profile />} />
+          <Route path="/notifications" element={<RouteLoader><Notifications /></RouteLoader>} />
+          <Route path="/alerts" element={<RouteLoader><AlertsCenter /></RouteLoader>} />
+          <Route path="/profile" element={<RouteLoader><Profile /></RouteLoader>} />
+        </Route>
+        <Route element={<RoleRoute allowedRoles={['ADMIN', 'OPERATIONS_MANAGER', 'DISPATCHER', 'PLANNER', 'MAINTENANCE_MANAGER']} />}>
+          <Route path="/trips" element={<RouteLoader><Trips /></RouteLoader>} />
         </Route>
         <Route element={<RoleRoute allowedRoles={['ADMIN', 'OPERATIONS_MANAGER', 'DISPATCHER', 'MAINTENANCE_MANAGER']} />}>
-          <Route path="/vehicles" element={<VehicleList />} />
-          <Route path="/vehicles/:id" element={<VehicleDetail />} />
+          <Route path="/vehicles" element={<RouteLoader><VehicleList /></RouteLoader>} />
+          <Route path="/vehicles/:id" element={<RouteLoader><VehicleDetail /></RouteLoader>} />
         </Route>
         <Route element={<RoleRoute allowedRoles={['ADMIN', 'OPERATIONS_MANAGER', 'DISPATCHER', 'PLANNER']} />}>
-          <Route path="/drivers" element={<DriverList />} />
-          <Route path="/routes" element={<RoutePlanner />} />
+          <Route path="/drivers" element={<RouteLoader><DriverList /></RouteLoader>} />
+          <Route path="/routes" element={<RouteLoader><RoutePlanner /></RouteLoader>} />
         </Route>
         <Route element={<RoleRoute allowedRoles={['ADMIN', 'OPERATIONS_MANAGER', 'MAINTENANCE_MANAGER']} />}>
-          <Route path="/maintenance" element={<MaintenanceAlerts />} />
+          <Route path="/maintenance" element={<RouteLoader><MaintenanceAlerts /></RouteLoader>} />
         </Route>
       </Route>
     </Routes>

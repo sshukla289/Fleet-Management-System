@@ -16,6 +16,10 @@ jest.mock('../../services/apiService', () => ({
   deleteRoutePlan: (...args: unknown[]) => deleteRoutePlanMock(...args),
 }))
 
+jest.mock('../../components/RoutePreviewMap', () => ({
+  RoutePreviewMap: ({ title }: { title: string }) => <div data-testid="route-preview-map">{title}</div>,
+}))
+
 describe('RoutePlanner', () => {
   beforeEach(() => {
     fetchRoutePlansMock.mockResolvedValue([
@@ -25,7 +29,11 @@ describe('RoutePlanner', () => {
         status: 'In Progress',
         distanceKm: 342,
         estimatedDuration: '6h 15m',
-        stops: ['Mumbai Hub', 'Lonavala', 'Pune Depot'],
+        stops: [
+          { name: 'Mumbai Hub', sequence: 1, latitude: 19.076, longitude: 72.8777, status: 'COMPLETED' },
+          { name: 'Lonavala', sequence: 2, latitude: 18.7546, longitude: 73.407, status: 'COMPLETED' },
+          { name: 'Pune Depot', sequence: 3, latitude: 18.5204, longitude: 73.8567, status: 'IN_PROGRESS' },
+        ],
       },
       {
         id: 'RT-503',
@@ -33,7 +41,10 @@ describe('RoutePlanner', () => {
         status: 'Completed',
         distanceKm: 96,
         estimatedDuration: '2h 10m',
-        stops: ['Bengaluru Center', 'Whitefield'],
+        stops: [
+          { name: 'Bengaluru Center', sequence: 1, latitude: 12.9716, longitude: 77.5946, status: 'COMPLETED' },
+          { name: 'Whitefield', sequence: 2, latitude: 12.9698, longitude: 77.7499, status: 'COMPLETED' },
+        ],
       },
     ])
     optimizeRoutesMock.mockReset()
@@ -123,6 +134,59 @@ describe('RoutePlanner', () => {
     expect(distanceInput).toHaveDisplayValue('09.99')
   })
 
+  it('creates a route with explicit stop coordinates', async () => {
+    createRoutePlanMock.mockResolvedValue({
+      id: 'RT-700',
+      name: 'Test Route',
+      status: 'Scheduled',
+      distanceKm: 25,
+      estimatedDuration: '1h 15m',
+      stops: [
+        { name: 'Alpha', sequence: 1, latitude: 19.1, longitude: 72.9, status: 'PENDING' },
+        { name: 'Beta', sequence: 2, latitude: 19.2, longitude: 73.0, status: 'PENDING' },
+      ],
+    })
+
+    render(
+      <MemoryRouter
+        future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+        initialEntries={['/routes']}
+      >
+        <RoutePlanner />
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: /add route/i }))
+
+    fireEvent.change(screen.getByLabelText(/^name$/i), { target: { value: 'Test Route' } })
+    fireEvent.change(screen.getByLabelText(/distance \(km\)/i), { target: { value: '25' } })
+    fireEvent.change(screen.getByLabelText(/estimated duration/i), { target: { value: '1h 15m' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /add stop/i }))
+    fireEvent.click(screen.getByRole('button', { name: /add stop/i }))
+
+    fireEvent.change(screen.getAllByLabelText(/^name$/i)[1], { target: { value: 'Alpha' } })
+    fireEvent.change(screen.getAllByLabelText(/^name$/i)[2], { target: { value: 'Beta' } })
+    fireEvent.change(screen.getAllByLabelText(/latitude/i)[0], { target: { value: '19.1' } })
+    fireEvent.change(screen.getAllByLabelText(/latitude/i)[1], { target: { value: '19.2' } })
+    fireEvent.change(screen.getAllByLabelText(/longitude/i)[0], { target: { value: '72.9' } })
+    fireEvent.change(screen.getAllByLabelText(/longitude/i)[1], { target: { value: '73.0' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /save route/i }))
+
+    await waitFor(() => {
+      expect(createRoutePlanMock).toHaveBeenCalledWith(expect.objectContaining({
+        name: 'Test Route',
+        distanceKm: 25,
+        estimatedDuration: '1h 15m',
+        stops: [
+          expect.objectContaining({ name: 'Alpha', sequence: 1, latitude: 19.1, longitude: 72.9 }),
+          expect.objectContaining({ name: 'Beta', sequence: 2, latitude: 19.2, longitude: 73.0 }),
+        ],
+      }))
+    })
+  })
+
   it('applies route optimization results to the planner', async () => {
     optimizeRoutesMock.mockResolvedValue([
       {
@@ -131,7 +195,12 @@ describe('RoutePlanner', () => {
         status: 'In Progress',
         distanceKm: 315,
         estimatedDuration: '5h 41m',
-        stops: ['Mumbai Hub', 'Lonavala', 'Pune Depot', 'Satara Crossdock'],
+        stops: [
+          { name: 'Mumbai Hub', sequence: 1, latitude: 19.076, longitude: 72.8777, status: 'COMPLETED' },
+          { name: 'Lonavala', sequence: 2, latitude: 18.7546, longitude: 73.407, status: 'COMPLETED' },
+          { name: 'Pune Depot', sequence: 3, latitude: 18.5204, longitude: 73.8567, status: 'IN_PROGRESS' },
+          { name: 'Satara Crossdock', sequence: 4, latitude: 17.6805, longitude: 74.0183, status: 'PENDING' },
+        ],
       },
       {
         id: 'RT-503',
@@ -139,7 +208,11 @@ describe('RoutePlanner', () => {
         status: 'Completed',
         distanceKm: 88,
         estimatedDuration: '1h 45m',
-        stops: ['Bengaluru Center', 'Indiranagar', 'Whitefield'],
+        stops: [
+          { name: 'Bengaluru Center', sequence: 1, latitude: 12.9716, longitude: 77.5946, status: 'COMPLETED' },
+          { name: 'Indiranagar', sequence: 2, latitude: 12.9784, longitude: 77.6408, status: 'COMPLETED' },
+          { name: 'Whitefield', sequence: 3, latitude: 12.9698, longitude: 77.7499, status: 'COMPLETED' },
+        ],
       },
     ])
 

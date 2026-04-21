@@ -96,6 +96,9 @@ docker-compose.yml  Full local development stack
 DOCKER.md           Docker-focused development notes
 ```
 
+Backend command quickstart:
+- See `backend/README.md` for wrapper-based backend commands such as `.\mvnw.cmd spring-boot:run`, `.\mvnw.cmd test`, and `.\mvnw.cmd package`.
+
 ## Core domain model
 
 The `Trip` aggregate is the center of the product. It connects:
@@ -133,6 +136,7 @@ The `Trip` aggregate is the center of the product. It connects:
 - `OPTIMIZED`
 - `DISPATCHED`
 - `IN_PROGRESS`
+- `PAUSED`
 - `COMPLETED`
 - `CANCELLED`
 - `BLOCKED`
@@ -438,13 +442,27 @@ Docker is the easiest path, but the project can also be run manually.
 Requirements:
 
 - Java 17
-- Maven
 - MySQL
+
+The repository now includes a Maven wrapper, so a separate Maven install is optional.
 
 Run from `backend/`:
 
 ```powershell
-mvn spring-boot:run
+.\mvnw.cmd spring-boot:run
+```
+
+Run the backend test suite from `backend/`:
+
+```powershell
+.\mvnw.cmd test
+```
+
+On macOS or Linux, use:
+
+```bash
+./mvnw spring-boot:run
+./mvnw test
 ```
 
 The backend expects MySQL configuration that matches the datasource settings in `backend/src/main/resources/application.yml` or environment overrides.

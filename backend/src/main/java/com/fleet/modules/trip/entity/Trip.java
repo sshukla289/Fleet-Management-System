@@ -47,6 +47,7 @@ public class Trip {
     private LocalDateTime plannedEndTime;
     private LocalDateTime actualStartTime;
     private LocalDateTime actualEndTime;
+    private LocalDateTime pausedAt;
     private LocalDateTime completionProcessedAt;
 
     private int estimatedDistance;
@@ -58,6 +59,9 @@ public class Trip {
 
     @Column(length = 1000)
     private String remarks;
+
+    @Column(length = 500)
+    private String pauseReason;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "trip_journey_stops", joinColumns = @JoinColumn(name = "trip_id"))
@@ -233,6 +237,14 @@ public class Trip {
         this.actualEndTime = actualEndTime;
     }
 
+    public LocalDateTime getPausedAt() {
+        return pausedAt;
+    }
+
+    public void setPausedAt(LocalDateTime pausedAt) {
+        this.pausedAt = pausedAt;
+    }
+
     public LocalDateTime getCompletionProcessedAt() {
         return completionProcessedAt;
     }
@@ -295,6 +307,14 @@ public class Trip {
 
     public void setRemarks(String remarks) {
         this.remarks = remarks;
+    }
+
+    public String getPauseReason() {
+        return pauseReason;
+    }
+
+    public void setPauseReason(String pauseReason) {
+        this.pauseReason = pauseReason;
     }
 
     public List<TripStop> getStops() {

@@ -139,7 +139,11 @@ public class OperationalAnalyticsService {
             .map(vehicle -> {
                 List<Trip> vehicleTrips = tripsByVehicle.getOrDefault(vehicle.getId(), List.of());
                 long completedTrips = vehicleTrips.stream().filter(trip -> trip.getStatus() == TripStatus.COMPLETED).count();
-                long activeTrips = vehicleTrips.stream().filter(trip -> trip.getStatus() == TripStatus.IN_PROGRESS || trip.getStatus() == TripStatus.DISPATCHED).count();
+                long activeTrips = vehicleTrips.stream().filter(
+                    trip -> trip.getStatus() == TripStatus.IN_PROGRESS
+                        || trip.getStatus() == TripStatus.PAUSED
+                        || trip.getStatus() == TripStatus.DISPATCHED
+                ).count();
                 double utilization = vehicleTrips.isEmpty() ? 0.0 : roundPercent((completedTrips + activeTrips) * 100.0 / vehicleTrips.size());
                 MaintenanceScheduleDTO blockingSchedule = blockingByVehicle.get(vehicle.getId());
                 return new VehicleAnalyticsRowDTO(
@@ -200,7 +204,11 @@ public class OperationalAnalyticsService {
             .map(driver -> {
                 List<Trip> driverTrips = tripsByDriver.getOrDefault(driver.getId(), List.of());
                 long completedTrips = driverTrips.stream().filter(trip -> trip.getStatus() == TripStatus.COMPLETED).count();
-                long activeTrips = driverTrips.stream().filter(trip -> trip.getStatus() == TripStatus.IN_PROGRESS || trip.getStatus() == TripStatus.DISPATCHED).count();
+                long activeTrips = driverTrips.stream().filter(
+                    trip -> trip.getStatus() == TripStatus.IN_PROGRESS
+                        || trip.getStatus() == TripStatus.PAUSED
+                        || trip.getStatus() == TripStatus.DISPATCHED
+                ).count();
                 double productivity = driverTrips.isEmpty() ? 0.0 : roundPercent(completedTrips * 100.0 / driverTrips.size());
                 return new DriverAnalyticsRowDTO(
                     driver.getId(),
@@ -318,7 +326,7 @@ public class OperationalAnalyticsService {
             return trip.getActualEndTime().isAfter(trip.getPlannedEndTime());
         }
 
-        return List.of(TripStatus.DRAFT, TripStatus.VALIDATED, TripStatus.OPTIMIZED, TripStatus.DISPATCHED, TripStatus.IN_PROGRESS)
+        return List.of(TripStatus.DRAFT, TripStatus.VALIDATED, TripStatus.OPTIMIZED, TripStatus.DISPATCHED, TripStatus.IN_PROGRESS, TripStatus.PAUSED)
             .contains(trip.getStatus())
             && trip.getPlannedEndTime().isBefore(now);
     }

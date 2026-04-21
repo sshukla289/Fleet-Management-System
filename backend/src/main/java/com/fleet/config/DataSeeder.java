@@ -170,21 +170,21 @@ public class DataSeeder {
             if (routePlanRepository.count() == 0) {
                 routePlanRepository.saveAll(List.of(
                     new RoutePlan("RT-501", "Western Corridor Morning Run", "In Progress", 342, "6h 15m", List.of(
-                        new TripStop("Mumbai Hub", 1, StopStatus.COMPLETED),
-                        new TripStop("Lonavala", 2, StopStatus.COMPLETED),
-                        new TripStop("Pune Depot", 3, StopStatus.IN_PROGRESS),
-                        new TripStop("Satara Crossdock", 4, StopStatus.PENDING)
+                        new TripStop("Mumbai Hub", 1, 19.0760, 72.8777, StopStatus.COMPLETED),
+                        new TripStop("Lonavala", 2, 18.7546, 73.4070, StopStatus.COMPLETED),
+                        new TripStop("Pune Depot", 3, 18.5204, 73.8567, StopStatus.IN_PROGRESS),
+                        new TripStop("Satara Crossdock", 4, 17.6805, 74.0183, StopStatus.PENDING)
                     )),
                     new RoutePlan("RT-502", "Central Maintenance Loop", "Scheduled", 184, "3h 40m", List.of(
-                        new TripStop("Nagpur Service Bay", 1, StopStatus.PENDING),
-                        new TripStop("Wardha", 2, StopStatus.PENDING),
-                        new TripStop("Amravati", 3, StopStatus.PENDING)
+                        new TripStop("Nagpur Service Bay", 1, 21.1458, 79.0882, StopStatus.PENDING),
+                        new TripStop("Wardha", 2, 20.7453, 78.6022, StopStatus.PENDING),
+                        new TripStop("Amravati", 3, 20.9374, 77.7796, StopStatus.PENDING)
                     )),
                     new RoutePlan("RT-503", "Southern Last-Mile Sweep", "Completed", 96, "2h 10m", List.of(
-                        new TripStop("Bengaluru Center", 1, StopStatus.COMPLETED),
-                        new TripStop("Indiranagar", 2, StopStatus.COMPLETED),
-                        new TripStop("Whitefield", 3, StopStatus.COMPLETED),
-                        new TripStop("Yelahanka", 4, StopStatus.COMPLETED)
+                        new TripStop("Bengaluru Center", 1, 12.9716, 77.5946, StopStatus.COMPLETED),
+                        new TripStop("Indiranagar", 2, 12.9784, 77.6408, StopStatus.COMPLETED),
+                        new TripStop("Whitefield", 3, 12.9698, 77.7499, StopStatus.COMPLETED),
+                        new TripStop("Yelahanka", 4, 13.1007, 77.5963, StopStatus.COMPLETED)
                     ))
                 ));
             }
@@ -213,10 +213,10 @@ public class DataSeeder {
                         "2h 10m",
                         "Morning dispatch in motion.",
                         List.of(
-                            new TripStop("Mumbai Hub", 1, StopStatus.COMPLETED),
-                            new TripStop("Lonavala", 2, StopStatus.COMPLETED),
-                            new TripStop("Pune Depot", 3, StopStatus.IN_PROGRESS),
-                            new TripStop("Satara Crossdock", 4, StopStatus.PENDING)
+                            new TripStop("Mumbai Hub", 1, 19.0760, 72.8777, StopStatus.COMPLETED),
+                            new TripStop("Lonavala", 2, 18.7546, 73.4070, StopStatus.COMPLETED),
+                            new TripStop("Pune Depot", 3, 18.5204, 73.8567, StopStatus.IN_PROGRESS),
+                            new TripStop("Satara Crossdock", 4, 17.6805, 74.0183, StopStatus.PENDING)
                         )
                     ),
                     new Trip(
@@ -241,9 +241,9 @@ public class DataSeeder {
                         null,
                         "Blocked by maintenance and compliance checks.",
                         List.of(
-                            new TripStop("Nagpur Service Bay", 1, StopStatus.PENDING),
-                            new TripStop("Wardha", 2, StopStatus.PENDING),
-                            new TripStop("Amravati", 3, StopStatus.PENDING)
+                            new TripStop("Nagpur Service Bay", 1, 21.1458, 79.0882, StopStatus.PENDING),
+                            new TripStop("Wardha", 2, 20.7453, 78.6022, StopStatus.PENDING),
+                            new TripStop("Amravati", 3, 20.9374, 77.7796, StopStatus.PENDING)
                         )
                     )
                 ));

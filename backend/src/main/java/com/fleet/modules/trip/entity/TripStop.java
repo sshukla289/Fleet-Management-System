@@ -10,6 +10,8 @@ public class TripStop {
 
     private String name;
     private int sequence;
+    private Double latitude;
+    private Double longitude;
 
     @Enumerated(EnumType.STRING)
     private StopStatus status;
@@ -21,8 +23,14 @@ public class TripStop {
     }
 
     public TripStop(String name, int sequence, StopStatus status) {
+        this(name, sequence, null, null, status);
+    }
+
+    public TripStop(String name, int sequence, Double latitude, Double longitude, StopStatus status) {
         this.name = name;
         this.sequence = sequence;
+        this.latitude = latitude;
+        this.longitude = longitude;
         this.status = status;
     }
 
@@ -40,6 +48,22 @@ public class TripStop {
 
     public void setSequence(int sequence) {
         this.sequence = sequence;
+    }
+
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(Double latitude) {
+        this.latitude = latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(Double longitude) {
+        this.longitude = longitude;
     }
 
     public StopStatus getStatus() {

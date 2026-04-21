@@ -13,6 +13,8 @@ import {
   fetchTrips,
   fetchVehicles,
   optimizeTrip,
+  pauseTrip,
+  resumeTrip,
   startTrip,
   validateTrip,
 } from '../services/apiService'
@@ -44,6 +46,8 @@ function statusClass(status: Trip['status']) {
     case 'DISPATCHED':
     case 'IN_PROGRESS':
       return 'dd-pill dd-pill--blue'
+    case 'PAUSED':
+      return 'dd-pill dd-pill--amber'
     case 'VALIDATED':
     case 'OPTIMIZED':
       return 'dd-pill dd-pill--violet'
@@ -85,7 +89,7 @@ function buildCompletionForm(trip?: Trip | null): CompleteTripInput {
 /* ── Determine active stop index from trip status ── */
 function getActiveStopIndex(trip: Trip): number {
   if (trip.status === 'COMPLETED') return trip.stops.length - 1
-  if (trip.status === 'IN_PROGRESS') return Math.min(1, trip.stops.length - 1)
+  if (trip.status === 'IN_PROGRESS' || trip.status === 'PAUSED') return Math.min(1, trip.stops.length - 1)
   if (trip.status === 'DISPATCHED') return 0
   return -1
 }
@@ -219,7 +223,7 @@ export function Trips() {
     }
 
     // Auto-poll telemetry every 15s for active trips
-    if (selectedTrip && ['IN_PROGRESS', 'DISPATCHED'].includes(selectedTrip.status)) {
+    if (selectedTrip && ['IN_PROGRESS', 'PAUSED', 'DISPATCHED'].includes(selectedTrip.status)) {
       const interval = setInterval(() => { void loadTelemetry(selectedTrip.tripId) }, 15000)
       return () => clearInterval(interval)
     }
@@ -259,7 +263,7 @@ export function Trips() {
   }
 
   const totalTrips = trips.length
-  const activeTrips = trips.filter((t) => t.status === 'DISPATCHED' || t.status === 'IN_PROGRESS').length
+  const activeTrips = trips.filter((t) => t.status === 'DISPATCHED' || t.status === 'IN_PROGRESS' || t.status === 'PAUSED').length
   const blockedTrips = trips.filter((t) => t.status === 'BLOCKED').length
   const completedTrips = trips.filter((t) => t.status === 'COMPLETED').length
   const role = session?.profile.role
@@ -269,6 +273,8 @@ export function Trips() {
   const canOptimizeSelectedTrip = selectedTrip ? ['DRAFT', 'VALIDATED', 'BLOCKED'].includes(selectedTrip.status) : false
   const canDispatchSelectedTrip = selectedTrip ? ['DRAFT', 'VALIDATED', 'OPTIMIZED', 'BLOCKED'].includes(selectedTrip.status) : false
   const canStartSelectedTrip = selectedTrip?.status === 'DISPATCHED'
+  const canPauseSelectedTrip = selectedTrip?.status === 'IN_PROGRESS'
+  const canResumeSelectedTrip = selectedTrip?.status === 'PAUSED'
   const canCompleteSelectedTrip = selectedTrip?.status === 'IN_PROGRESS'
   const checklistCount = Object.values(checklist).filter(Boolean).length
 
@@ -285,7 +291,7 @@ export function Trips() {
     ? [
         { label: 'Assigned', time: formatDateTime(selectedTrip.plannedStartTime), done: true },
         { label: 'Dispatched', time: selectedTrip.dispatchStatus !== 'NOT_DISPATCHED' ? 'Confirmed' : 'Pending', done: ['DISPATCHED', 'RELEASED'].includes(selectedTrip.dispatchStatus) },
-        { label: 'In Transit', time: formatDateTime(selectedTrip.actualStartTime), done: ['IN_PROGRESS', 'COMPLETED'].includes(selectedTrip.status) },
+        { label: 'In Transit', time: formatDateTime(selectedTrip.actualStartTime), done: ['IN_PROGRESS', 'PAUSED', 'COMPLETED'].includes(selectedTrip.status) },
         { label: 'Delivered', time: formatDateTime(selectedTrip.actualEndTime), done: selectedTrip.status === 'COMPLETED' },
       ]
     : []
@@ -363,10 +369,18 @@ export function Trips() {
               </>
             )}
             {canExecuteTrips && (
-              <button className="dd-btn dd-btn--primary" disabled={working || !canStartSelectedTrip} onClick={() => void handleTripAction(() => startTrip(selectedTrip.tripId), 'Trip started.')} type="button">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="5 3 19 12 5 21 5 3" /></svg>
-                Start Trip
-              </button>
+              <>
+                <button className="dd-btn dd-btn--primary" disabled={working || !canStartSelectedTrip} onClick={() => void handleTripAction(() => startTrip(selectedTrip.tripId), 'Trip started.')} type="button">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+                  Start Trip
+                </button>
+                <button className="dd-btn dd-btn--secondary" disabled={working || !canPauseSelectedTrip} onClick={() => void handleTripAction(() => pauseTrip(selectedTrip.tripId), 'Trip paused.')} type="button">
+                  Pause Trip
+                </button>
+                <button className="dd-btn dd-btn--primary" disabled={working || !canResumeSelectedTrip} onClick={() => void handleTripAction(() => resumeTrip(selectedTrip.tripId), 'Trip resumed.')} type="button">
+                  Resume Trip
+                </button>
+              </>
             )}
             <button className="dd-btn dd-btn--ghost" type="button" onClick={() => window.open(`https://www.google.com/maps/dir/${encodeURIComponent(selectedTrip.source)}/${selectedTrip.stops.map(s => encodeURIComponent(s.name)).join('/')}/${encodeURIComponent(selectedTrip.destination)}`, '_blank')}>
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>

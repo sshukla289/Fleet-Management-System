@@ -13,6 +13,7 @@ import com.fleet.modules.alert.repository.AlertRepository;
 import com.fleet.modules.audit.service.AuditLogService;
 import com.fleet.modules.driver.entity.Driver;
 import com.fleet.modules.driver.repository.DriverRepository;
+import com.fleet.modules.notification.service.DriverInboxRealtimeService;
 import com.fleet.modules.notification.service.NotificationService;
 import com.fleet.modules.telemetry.entity.Telemetry;
 import com.fleet.modules.trip.entity.TripStatus;
@@ -39,7 +40,8 @@ public class AlertService {
         TripStatus.VALIDATED,
         TripStatus.OPTIMIZED,
         TripStatus.DISPATCHED,
-        TripStatus.IN_PROGRESS
+        TripStatus.IN_PROGRESS,
+        TripStatus.PAUSED
     );
 
     private final AlertRepository alertRepository;
@@ -48,6 +50,7 @@ public class AlertService {
     private final CurrentUserService currentUserService;
     private final TripRepository tripRepository;
     private final DriverRepository driverRepository;
+    private final DriverInboxRealtimeService driverInboxRealtimeService;
 
     public AlertService(
         AlertRepository alertRepository,
@@ -55,7 +58,8 @@ public class AlertService {
         AuditLogService auditLogService,
         CurrentUserService currentUserService,
         TripRepository tripRepository,
-        DriverRepository driverRepository
+        DriverRepository driverRepository,
+        DriverInboxRealtimeService driverInboxRealtimeService
     ) {
         this.alertRepository = alertRepository;
         this.notificationService = notificationService;
@@ -63,12 +67,18 @@ public class AlertService {
         this.currentUserService = currentUserService;
         this.tripRepository = tripRepository;
         this.driverRepository = driverRepository;
+        this.driverInboxRealtimeService = driverInboxRealtimeService;
     }
 
     public List<AlertDTO> getAlerts() {
+        return getAlerts(null);
+    }
+
+    public List<AlertDTO> getAlerts(String driverId) {
+        String requestedDriverId = normalizeRequestedDriverId(driverId);
         return alertRepository.findAll().stream()
             .sorted((left, right) -> right.getCreatedAt().compareTo(left.getCreatedAt()))
-            .filter(this::isVisibleToCurrentUser)
+            .filter(alert -> requestedDriverId != null ? isVisibleToDriver(requestedDriverId, alert) : isVisibleToCurrentUser(alert))
             .map(this::toDto)
             .toList();
     }
@@ -118,7 +128,7 @@ public class AlertService {
                 "relatedVehicleId", saved.getRelatedVehicleId()
             )
         );
-        return toDto(saved);
+        return publishRealtime(saved);
     }
 
     @Transactional
@@ -144,7 +154,7 @@ public class AlertService {
                 "status", saved.getStatus().name()
             )
         );
-        return toDto(saved);
+        return publishRealtime(saved);
     }
 
     @Transactional
@@ -170,7 +180,7 @@ public class AlertService {
                 "status", saved.getStatus().name()
             )
         );
-        return toDto(saved);
+        return publishRealtime(saved);
     }
 
     @Transactional
@@ -231,6 +241,52 @@ public class AlertService {
         );
     }
 
+    public AlertDTO createDriverIssueAlert(
+        String issueId,
+        AlertCategory category,
+        AlertSeverity severity,
+        String title,
+        String description,
+        String tripId,
+        String vehicleId,
+        String metadataJson
+    ) {
+        return upsertAlert(
+            category,
+            severity,
+            title,
+            description,
+            "driver-issue",
+            issueId,
+            tripId,
+            vehicleId,
+            metadataJson,
+            false
+        );
+    }
+
+    public AlertDTO createEmergencySosAlert(
+        String driverId,
+        String tripId,
+        String vehicleId,
+        Double lat,
+        Double lng,
+        String metadataJson
+    ) {
+        return upsertAlert(
+            AlertCategory.SAFETY,
+            AlertSeverity.CRITICAL,
+            "Emergency SOS activated",
+            "Driver " + driverId + " triggered an emergency SOS" + (tripId != null ? " for trip " + tripId : "") + ".",
+            "driver-sos",
+            tripId != null ? tripId : driverId,
+            tripId,
+            vehicleId,
+            metadata(lat, lng, metadataJson),
+            false
+        );
+    }
+
     public List<AlertDTO> getOpenCriticalAlerts() {
         return alertRepository.findBySeverityInAndStatusInOrderByCreatedAtDesc(
                 List.of(AlertSeverity.CRITICAL),
@@ -263,6 +319,32 @@ public class AlertService {
         String relatedVehicleId,
         String metadataJson
     ) {
+        return upsertAlert(
+            category,
+            severity,
+            title,
+            description,
+            sourceType,
+            sourceId,
+            relatedTripId,
+            relatedVehicleId,
+            metadataJson,
+            true
+        );
+    }
+
+    private AlertDTO upsertAlert(
+        AlertCategory category,
+        AlertSeverity severity,
+        String title,
+        String description,
+        String sourceType,
+        String sourceId,
+        String relatedTripId,
+        String relatedVehicleId,
+        String metadataJson,
+        boolean publishCriticalNotification
+    ) {
         String normalizedSourceType = normalize(sourceType);
         String normalizedSourceId = normalize(sourceId);
 
@@ -293,8 +375,10 @@ public class AlertService {
         alert.setUpdatedAt(LocalDateTime.now());
 
         Alert saved = alertRepository.save(alert);
-        maybeNotifyCritical(saved);
-        return toDto(saved);
+        if (publishCriticalNotification) {
+            maybeNotifyCritical(saved);
+        }
+        return publishRealtime(saved);
     }
 
     private Alert findAlert(String id) {
@@ -322,8 +406,16 @@ public class AlertService {
         }
 
         AppUser actor = currentUserService.getRequiredUser();
-        return matchesDriverTrip(actor.getId(), alert.getRelatedTripId())
-            || matchesDriverVehicle(actor.getId(), alert.getRelatedVehicleId());
+        return isVisibleToDriver(actor.getId(), alert);
+    }
+
+    private boolean isVisibleToDriver(String driverId, Alert alert) {
+        if (driverId == null || driverId.isBlank() || alert == null) {
+            return false;
+        }
+
+        return matchesDriverTrip(driverId, alert.getRelatedTripId())
+            || matchesDriverVehicle(driverId, alert.getRelatedVehicleId());
     }
 
     private boolean matchesDriverTrip(String driverId, String tripId) {
@@ -374,6 +466,52 @@ public class AlertService {
         );
     }
 
+    public AlertDTO createRouteDeviationAlert(String tripId, String vehicleId, double distanceMeters, double thresholdMeters) {
+        return upsertAlert(
+            AlertCategory.ROUTE_DEVIATION,
+            AlertSeverity.HIGH,
+            "Route deviation detected",
+            "Vehicle has moved " + Math.round(distanceMeters) + " meters away from the planned route corridor.",
+            "telemetry-route",
+            tripId,
+            tripId,
+            vehicleId,
+            "{\"distanceMeters\":" + Math.round(distanceMeters) + ",\"thresholdMeters\":" + Math.round(thresholdMeters) + "}"
+        );
+    }
+
+    @Transactional
+    public AlertDTO clearRouteDeviationAlert(String tripId) {
+        String normalizedTripId = normalize(tripId);
+        if (normalizedTripId == null) {
+            return null;
+        }
+
+        Alert alert = alertRepository
+            .findTopBySourceTypeAndSourceIdAndTitleAndStatusInOrderByCreatedAtDesc(
+                "telemetry-route",
+                normalizedTripId,
+                "Route deviation detected",
+                OPEN_STATUSES
+            )
+            .orElse(null);
+
+        if (alert == null) {
+            return null;
+        }
+
+        alert.setStatus(AlertLifecycleStatus.RESOLVED);
+        alert.setResolvedAt(LocalDateTime.now());
+        alert.setUpdatedAt(LocalDateTime.now());
+        return publishRealtime(alertRepository.save(alert));
+    }
+
+    private AlertDTO publishRealtime(Alert alert) {
+        AlertDTO dto = toDto(alert);
+        driverInboxRealtimeService.publishAlert(dto);
+        return dto;
+    }
+
     private String nextId() {
         int nextNumber = alertRepository.findAll().stream()
             .map(Alert::getId)
@@ -404,10 +542,46 @@ public class AlertService {
         return trimmed.isEmpty() ? null : trimmed;
     }
 
+    private String normalizeRequestedDriverId(String driverId) {
+        String normalizedDriverId = normalize(driverId);
+        if (normalizedDriverId == null) {
+            return null;
+        }
+
+        if (currentUserService.getCurrentRole() == AppRole.DRIVER
+            && !normalizedDriverId.equalsIgnoreCase(currentUserService.getRequiredUser().getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Driver alert access is limited to the current authenticated driver.");
+        }
+
+        return normalizedDriverId;
+    }
+
     private void maybeNotifyCritical(Alert alert) {
         if (alert != null && alert.getSeverity() == AlertSeverity.CRITICAL && OPEN_STATUSES.contains(alert.getStatus())) {
             notificationService.notifyCriticalAlert(alert);
         }
+    }
+
+    private String metadata(Double lat, Double lng, String metadataJson) {
+        if (lat == null && lng == null) {
+            return metadataJson;
+        }
+
+        String prefix = "{\"lat\":" + lat + ",\"lng\":" + lng;
+        if (metadataJson == null || metadataJson.isBlank()) {
+            return prefix + "}";
+        }
+
+        String trimmed = metadataJson.trim();
+        if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+            String content = trimmed.substring(1, trimmed.length() - 1).trim();
+            if (content.isEmpty()) {
+                return prefix + "}";
+            }
+            return prefix + "," + content + "}";
+        }
+
+        return prefix + ",\"details\":\"" + trimmed.replace("\"", "\\\"") + "\"}";
     }
 
     private Map<String, Object> details(Object... items) {

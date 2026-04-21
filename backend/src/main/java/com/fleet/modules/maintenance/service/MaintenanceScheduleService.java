@@ -1,5 +1,9 @@
 package com.fleet.modules.maintenance.service;
 
+import com.fleet.modules.alert.dto.CreateAlertRequest;
+import com.fleet.modules.alert.entity.AlertCategory;
+import com.fleet.modules.alert.entity.AlertSeverity;
+import com.fleet.modules.alert.service.AlertService;
 import com.fleet.modules.audit.service.AuditLogService;
 import com.fleet.modules.auth.service.CurrentUserService;
 import com.fleet.modules.maintenance.dto.CreateMaintenanceScheduleRequest;
@@ -26,17 +30,20 @@ public class MaintenanceScheduleService {
     );
 
     private final MaintenanceScheduleRepository maintenanceScheduleRepository;
+    private final AlertService alertService;
     private final NotificationService notificationService;
     private final AuditLogService auditLogService;
     private final CurrentUserService currentUserService;
 
     public MaintenanceScheduleService(
         MaintenanceScheduleRepository maintenanceScheduleRepository,
+        AlertService alertService,
         NotificationService notificationService,
         AuditLogService auditLogService,
         CurrentUserService currentUserService
     ) {
         this.maintenanceScheduleRepository = maintenanceScheduleRepository;
+        this.alertService = alertService;
         this.notificationService = notificationService;
         this.auditLogService = auditLogService;
         this.currentUserService = currentUserService;
@@ -88,6 +95,17 @@ public class MaintenanceScheduleService {
                 saved,
                 "Dispatch is blocked for vehicle " + saved.getVehicleId() + " due to maintenance schedule " + saved.getId() + "."
             );
+            alertService.createAlert(new CreateAlertRequest(
+                AlertCategory.MAINTENANCE,
+                AlertSeverity.HIGH,
+                "Maintenance action required",
+                "Vehicle " + saved.getVehicleId() + " is blocked for dispatch by maintenance schedule " + saved.getId() + ".",
+                "maintenance_schedule",
+                saved.getId(),
+                null,
+                saved.getVehicleId(),
+                "{\"blockDispatch\":" + saved.isBlockDispatch() + ",\"scheduleId\":\"" + saved.getId() + "\"}"
+            ));
         }
 
         auditLogService.record(

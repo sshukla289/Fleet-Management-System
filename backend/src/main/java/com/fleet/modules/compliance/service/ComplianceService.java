@@ -33,7 +33,8 @@ public class ComplianceService {
         TripStatus.VALIDATED,
         TripStatus.OPTIMIZED,
         TripStatus.DISPATCHED,
-        TripStatus.IN_PROGRESS
+        TripStatus.IN_PROGRESS,
+        TripStatus.PAUSED
     );
 
     private final VehicleRepository vehicleRepository;
