@@ -183,6 +183,9 @@ export function TripExecutionPage() {
   const trackingTripId = activeTrip && activeTrip.status !== 'COMPLETED' ? activeTrip.id : undefined
   const activeTripId = activeTrip?.id ?? null
   const isDriver = session?.profile.role === 'DRIVER'
+  const driverDisplayName = isDriver
+    ? session?.profile.name?.trim() || null
+    : null
   const pauseReasonDraft = pauseReasonDraftState.tripId === activeTripId ? pauseReasonDraftState.value : ''
   const selectedChecklistType: ChecklistType = !activeTrip || activeTrip.status === 'DISPATCHED'
     ? 'PRE'
@@ -221,15 +224,15 @@ export function TripExecutionPage() {
   })
 
   const withDriverDisplayName = useCallback((trip: ExecutionTrip | null) => {
-    if (!trip || !isDriver || !session?.profile.name?.trim()) {
+    if (!trip || !driverDisplayName) {
       return trip
     }
 
     return {
       ...trip,
-      driverName: session.profile.name.trim(),
+      driverName: driverDisplayName,
     }
-  }, [isDriver, session?.profile.name])
+  }, [driverDisplayName])
 
   useEffect(() => {
     if (activeTripQuery.data) {
