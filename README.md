@@ -374,14 +374,16 @@ When running with Docker Compose, the default local URLs are:
 | Service | URL | Notes |
 | --- | --- | --- |
 | Frontend | `http://localhost:5173` | Main UI |
-| Backend API root | `http://localhost:8080` | Public API info route |
-| Backend health | `http://localhost:8080/api/health` | Simple health check |
-| API base URL | `http://localhost:8080/api` | Used by frontend |
-| MySQL | `localhost:3306` | Development database |
+| Backend API root | `http://localhost:8081` | Public API info route |
+| Backend health | `http://localhost:8081/api/health` | Simple health check |
+| API base URL | `http://localhost:8081/api` | Used by frontend |
+| MySQL | `localhost:3307` | Development database |
 
 ## Quick start
 
 Docker is the recommended way to run the project locally.
+The repo now uses a single frontend port: `5173`.
+That same port is used by local Vite and the Docker frontend container, so run only one frontend at a time.
 
 ### Prerequisites
 
@@ -423,8 +425,8 @@ docker compose up --build
 ### 4. Open the application
 
 - frontend: `http://localhost:5173`
-- backend root: `http://localhost:8080`
-- backend health: `http://localhost:8080/api/health`
+- backend root: `http://localhost:8081`
+- backend health: `http://localhost:8081/api/health`
 
 ### 5. Sign in
 
@@ -436,6 +438,7 @@ If seeding is enabled, start with:
 ## Local development without Docker
 
 Docker is the easiest path, but the project can also be run manually.
+Local Vite uses the same `FRONTEND_PORT` as Docker, so stop the Docker frontend before running `npm run dev`.
 
 ### Backend
 
@@ -479,6 +482,30 @@ Run from `client-frontend/`:
 ```powershell
 npm install
 npm run dev
+```
+
+The local frontend will open on:
+
+```text
+http://localhost:5173
+```
+
+`npm run dev` now guards the single frontend port used by this repo.
+If Docker is already publishing `5173`, the launcher stops the Docker frontend before starting local Vite so you keep one frontend port instead of bouncing between ports.
+
+If you also run the backend outside Docker, point the frontend at that backend before starting Vite.
+This repo defaults to backend port `8081`, so the normal local values are:
+
+```text
+VITE_API_BASE_URL=http://localhost:8081/api
+VITE_HTTP_BASE_URL=http://localhost:8081
+```
+
+If your Spring Boot backend is intentionally running on another port such as `8080`, override the values before starting Vite:
+
+```text
+VITE_API_BASE_URL=http://localhost:8080/api
+VITE_HTTP_BASE_URL=http://localhost:8080
 ```
 
 Build for production:
@@ -549,14 +576,18 @@ docker compose down -v
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
+| `FRONTEND_PORT` | `5173` | Host port used by both local Vite and Docker frontend |
+| `VITE_API_BASE_URL` | `http://localhost:8081/api` | Frontend API target for the default Docker workflow |
+| `VITE_HTTP_BASE_URL` | `http://localhost:8081` | Frontend base URL for backend-root requests |
 | `VITE_USE_MOCK_API` | not set | Enables explicit frontend mock mode |
+| `APP_WEBSOCKET_ALLOWED_ORIGIN_PATTERNS` | `http://localhost:5173,http://127.0.0.1:5173` | WebSocket origin allowlist |
 
 ### API base URL
 
 The frontend defaults to:
 
 ```text
-http://localhost:8080/api
+http://localhost:8081/api
 ```
 
 ## First walkthrough for a new user
@@ -761,8 +792,8 @@ That usually means one of these:
 
 Start by checking:
 
-- backend root: `http://localhost:8080`
-- backend health: `http://localhost:8080/api/health`
+- backend root: `http://localhost:8081`
+- backend health: `http://localhost:8081/api/health`
 - frontend login page: `http://localhost:5173`
 
 ### I cannot log in with the demo accounts
@@ -773,6 +804,20 @@ Check whether `APP_SEED_ENABLED=true` is set before starting the backend. If the
 docker compose down -v
 docker compose up --build
 ```
+
+### The login page says `Unable to reach the server`
+
+That message usually means the frontend is pointing at the wrong backend URL, not that the backend is completely missing.
+
+Check these first:
+
+- backend health responds at `http://localhost:8081/api/health`
+- the frontend is running on `http://localhost:5173`
+- `VITE_API_BASE_URL` is `http://localhost:8081/api`
+- `VITE_HTTP_BASE_URL` is `http://localhost:8081`
+
+If you changed any frontend env values, restart `npm run dev` so Vite picks them up.
+If the browser still shows the old error after a restart, do a hard refresh so it loads the latest frontend bundle.
 
 ### My backend starts but the UI has no useful data
 

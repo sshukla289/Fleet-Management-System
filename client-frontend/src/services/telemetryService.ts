@@ -1,8 +1,6 @@
 import { AUTH_STORAGE_KEY } from '../context/auth-context'
-import { readViteEnv } from '../lib/readViteEnv'
+import { resolveApiBaseUrl } from '../lib/runtimeUrls'
 import type { CreateTelemetryInput, TelemetryData } from '../types'
-
-const DEFAULT_API_BASE_URL = readViteEnv('VITE_API_BASE_URL') ?? 'http://localhost:8080/api'
 
 interface ApiTelemetryPoint {
   vehicleId: string
@@ -14,8 +12,7 @@ interface ApiTelemetryPoint {
 }
 
 function getApiBaseUrl() {
-  const runtimeConfig = globalThis as { __API_BASE_URL__?: string }
-  return (runtimeConfig.__API_BASE_URL__ ?? DEFAULT_API_BASE_URL).replace(/\/$/, '')
+  return resolveApiBaseUrl()
 }
 
 function getToken() {

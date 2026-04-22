@@ -3,13 +3,16 @@
 1. Copy `.env.example` to `.env` and set stronger local passwords.
 2. Start the stack with `docker compose up --build`.
 3. Keep it running while you edit code.
+4. Open the frontend at `http://localhost:5173` and the backend at `http://localhost:8081`.
+
+The Docker frontend now uses the same host port as local Vite (`5173`), so run either the Docker frontend or the local frontend, not both at the same time.
 
 The MySQL service now uses the `mysql_data_v2` volume. This avoids credential drift from older initializations while keeping the old `mysql_data` volume untouched.
 
 What now updates without a full image rebuild:
 - `backend/src/**` changes are read directly by the backend container. Restart only the backend service with `docker compose restart backend` when you want Java changes picked up.
 - `client-frontend/src/**`, `public/**`, `index.html`, `vite.config.ts`, and TypeScript config changes are mounted into the frontend container, so Vite can reload them without rebuilding the image.
-- Database data stays in the `mysql_data` volume and dependency caches stay in named volumes, so container restarts stay lightweight.
+- Database data stays in the `mysql_data_v2` volume and dependency caches stay in named volumes, so container restarts stay lightweight.
 - Backend Maven dependencies are cached in the `backend_m2` volume, allowing the backend container to download missing dependencies even with a read-only root filesystem.
 
 When a rebuild is still expected:

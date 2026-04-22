@@ -1,12 +1,8 @@
 import { AUTH_STORAGE_KEY } from '../context/auth-context'
-import { readViteEnv } from '../lib/readViteEnv'
-
-const DEFAULT_HTTP_BASE_URL = readViteEnv('VITE_HTTP_BASE_URL') ?? 'http://localhost:8080'
+import { resolveHttpBaseUrl } from '../lib/runtimeUrls'
 
 function getRuntimeBaseUrl() {
-  const runtimeConfig = globalThis as { __API_BASE_URL__?: string }
-  const apiBaseUrl = runtimeConfig.__API_BASE_URL__ ?? `${DEFAULT_HTTP_BASE_URL}/api`
-  return apiBaseUrl.replace(/\/api\/?$/, '').replace(/\/$/, '')
+  return resolveHttpBaseUrl()
 }
 
 export function getWebSocketHttpUrl() {
